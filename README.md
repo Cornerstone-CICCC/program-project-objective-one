@@ -2,7 +2,7 @@
 
 ## Team Composition
 
-- Each group must have **up to 6 members**, depending on project size, to ensure effective workload distribution.
+- Each group can have **up to 3 members**, depending on project size, to ensure effective workload distribution.
 - Discuss and assign roles and responsibilities within the team.
 
 ## Choosing a Project
