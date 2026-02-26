@@ -9,6 +9,8 @@ import dotenv from 'dotenv';
 // Import routes
 import userRouter from './routes/user.routes';
 import locationRouter from './routes/location.routes';
+import skillRouter from './routes/skill.routes';
+import userSkillRouter from './routes/userSkill.routes';
 
 dotenv.config();
 
@@ -36,6 +38,8 @@ app.use(express.json());
 // Routes
 app.use('/users', userRouter);
 app.use('/locations', locationRouter);
+app.use('/skills', skillRouter);
+app.use('/user-skills', userSkillRouter);
 
 app.get('/', (req: Request, res: Response) => {
   res.status(200).send('Server is running!');
