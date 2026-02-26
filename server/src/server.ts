@@ -11,6 +11,7 @@ import userRouter from './routes/user.routes';
 import locationRouter from './routes/location.routes';
 import skillRouter from './routes/skill.routes';
 import userSkillRouter from './routes/userSkill.routes';
+import tradeRouter from './routes/trade.routes';
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use('/users', userRouter);
 app.use('/locations', locationRouter);
 app.use('/skills', skillRouter);
 app.use('/user-skills', userSkillRouter);
+app.use('/trades', tradeRouter);
 
 app.get('/', (req: Request, res: Response) => {
   res.status(200).send('Server is running!');

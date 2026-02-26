@@ -13,6 +13,7 @@ const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const location_routes_1 = __importDefault(require("./routes/location.routes"));
 const skill_routes_1 = __importDefault(require("./routes/skill.routes"));
 const userSkill_routes_1 = __importDefault(require("./routes/userSkill.routes"));
+const trade_routes_1 = __importDefault(require("./routes/trade.routes"));
 dotenv_1.default.config();
 // Create server
 const app = (0, express_1.default)();
@@ -34,6 +35,7 @@ app.use('/users', user_routes_1.default);
 app.use('/locations', location_routes_1.default);
 app.use('/skills', skill_routes_1.default);
 app.use('/user-skills', userSkill_routes_1.default);
+app.use('/trades', trade_routes_1.default);
 app.get('/', (req, res) => {
     res.status(200).send('Server is running!');
 });
