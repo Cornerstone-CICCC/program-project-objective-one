@@ -2,6 +2,7 @@
 import express, { Request, Response } from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { setupSockets } from './sockets/chat.socket';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
@@ -13,11 +14,13 @@ import skillRouter from './routes/skill.routes';
 import userSkillRouter from './routes/userSkill.routes';
 import tradeRouter from './routes/trade.routes';
 import ratingRouter from './routes/rating.routes';
+import messageRouter from './routes/message.routes';
 
 dotenv.config();
 
 // Create server
 const app = express();
+const server = createServer(app);
 
 // Define allowed origins
 const allowedOrigins = [
@@ -26,6 +29,18 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
 ].filter((origin): origin is string => !!origin);
+
+// Initialize Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  },
+});
+
+// Connect the socket logic
+setupSockets(io);
 
 // Middleware
 app.use(
@@ -44,6 +59,7 @@ app.use('/skills', skillRouter);
 app.use('/user-skills', userSkillRouter);
 app.use('/trades', tradeRouter);
 app.use('/ratings', ratingRouter);
+app.use('/messages', messageRouter);
 
 app.get('/', (req: Request, res: Response) => {
   res.status(200).send('Server is running!');
@@ -58,7 +74,7 @@ mongoose
   .then(() => {
     console.log('Connected to MongoDB database');
 
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
     });
   })
