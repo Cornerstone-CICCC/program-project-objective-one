@@ -143,6 +143,48 @@ const login = async (req: Request, res: Response) => {
 };
 
 /**
+ * Get All Users
+ * @route GET /users
+ */
+const getAllUsers = async (req: Request, res: Response) => {
+  try {
+    const users = await userService.getAll();
+    res.status(200).json(users);
+  } catch (err) {
+    console.error('Get all users error:', err);
+    res.status(500).json({
+      messsage: 'Server error while fetching users.',
+    });
+  }
+};
+
+/**
+ * Get User by ID
+ * @route GET /users/:id
+ */
+const getUserById = async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = await userService.getById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found.',
+      });
+    }
+
+    const { email, password, ...publicUser } = user.toObject();
+
+    res.status(200).json(publicUser);
+  } catch (err) {
+    console.error('Get user by ID error:', err);
+    res.status(500).json({
+      message: 'Server error while fetching user details.',
+    });
+  }
+};
+
+/**
  * Get Current User Info
  * @route GET /users/me
  */
@@ -273,6 +315,8 @@ const deleteAccount = async (req: Request, res: Response) => {
 export default {
   signup,
   login,
+  getAllUsers,
+  getUserById,
   getMe,
   updateAccount,
   deleteAccount,
