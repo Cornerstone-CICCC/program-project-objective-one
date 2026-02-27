@@ -1,4 +1,5 @@
 import { Trade, ITrade } from '../models/trade.model';
+import { User } from '../models/user.model';
 
 // Create a new Trade request
 const create = async (data: Partial<ITrade>) => {
@@ -62,6 +63,11 @@ const updateStatus = async (
     if (trade.completion_confirmed_initiator && trade.completion_confirmed_receiver) {
       trade.status = 'COMPLETED';
       trade.completed_at = new Date();
+
+      await User.updateMany(
+        { _id: { $in: [trade.initiator_id, trade.receiver_id] } },
+        { $inc: { total_trades: 1 } },
+      );
     } else {
       // Only one agreed
       console.log(`Trade ${tradeId}: One side confirmed. Waiting for the other.`);

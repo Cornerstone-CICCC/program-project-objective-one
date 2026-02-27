@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const trade_model_1 = require("../models/trade.model");
+const user_model_1 = require("../models/user.model");
 // Create a new Trade request
 const create = (data) => __awaiter(void 0, void 0, void 0, function* () {
     const { initiator_id, receiver_id, offered_skill_id, sought_skill_id } = data;
@@ -58,6 +59,7 @@ const updateStatus = (tradeId, userId, newStatus) => __awaiter(void 0, void 0, v
         if (trade.completion_confirmed_initiator && trade.completion_confirmed_receiver) {
             trade.status = 'COMPLETED';
             trade.completed_at = new Date();
+            yield user_model_1.User.updateMany({ _id: { $in: [trade.initiator_id, trade.receiver_id] } }, { $inc: { total_trades: 1 } });
         }
         else {
             // Only one agreed
