@@ -8,6 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -134,6 +145,45 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 /**
+ * Get All Users
+ * @route GET /users
+ */
+const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const users = yield user_service_1.default.getAll();
+        res.status(200).json(users);
+    }
+    catch (err) {
+        console.error('Get all users error:', err);
+        res.status(500).json({
+            messsage: 'Server error while fetching users.',
+        });
+    }
+});
+/**
+ * Get User by ID
+ * @route GET /users/:id
+ */
+const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const user = yield user_service_1.default.getById(id);
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found.',
+            });
+        }
+        const _a = user.toObject(), { email, password } = _a, publicUser = __rest(_a, ["email", "password"]);
+        res.status(200).json(publicUser);
+    }
+    catch (err) {
+        console.error('Get user by ID error:', err);
+        res.status(500).json({
+            message: 'Server error while fetching user details.',
+        });
+    }
+});
+/**
  * Get Current User Info
  * @route GET /users/me
  */
@@ -247,6 +297,8 @@ const deleteAccount = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 exports.default = {
     signup,
     login,
+    getAllUsers,
+    getUserById,
     getMe,
     updateAccount,
     deleteAccount,
