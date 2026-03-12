@@ -1,10 +1,47 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  // NOTE: Update this to include the paths to all files that contain Nativewind classes.
-  content: ['./App.tsx', './components/**/*.{js,jsx,ts,tsx}'],
+  darkMode: 'class',
+  content: ['./App.{js,jsx,ts,tsx}', './src/**/*.{js,jsx,ts,tsx}'],
   presets: [require('nativewind/preset')],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        body: ['PlusJakartaSans-Regular'],
+        bodyMedium: ['PlusJakartaSans-Medium'],
+        bodyBold: ['PlusJakartaSans-Bold'],
+        technical: ['DMMono-Regular'],
+        technicalMedium: ['DMMono-Medium'],
+        bungee: ['Bungee-Regular'],
+        mono: ['JetBrainsMono-Regular'],
+      },
+      colors: {
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
+        card: 'var(--card)',
+        border: 'var(--border)',
+        primary: {
+          DEFAULT: 'var(--primary)',
+          foreground: 'var(--primary-foreground)',
+        },
+        muted: {
+          DEFAULT: 'var(--muted)',
+          foreground: 'var(--muted-foreground)',
+        },
+        accent: {
+          DEFAULT: 'var(--accent)',
+          foreground: 'var(--accent-foreground)',
+        },
+        sidebar: {
+          DEFAULT: 'var(--sidebar)',
+          border: 'var(--sidebar-border)',
+          primary: {
+            DEFAULT: 'var(--sidebar-primary)',
+            foreground: 'var(--sidebar-primary-foreground)',
+          },
+          accent: 'var(--sidebar-accent)',
+        },
+      },
+    },
   },
   plugins: [],
 };
