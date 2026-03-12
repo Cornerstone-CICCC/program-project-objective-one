@@ -200,7 +200,10 @@ const ProfileScreen = () => {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity className="flex-1 items-center justify-center rounded-sm border-2 border-accent bg-transparent py-3 transition-colors hover:bg-accent">
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ProposeTrade', { userId: user.id })}
+              className="flex-1 items-center justify-center rounded-sm border-2 border-accent bg-transparent py-3 transition-colors active:opacity-70"
+            >
               <Text className="font-technical text-sm uppercase tracking-wider text-foreground">
                 Propose Trade
               </Text>

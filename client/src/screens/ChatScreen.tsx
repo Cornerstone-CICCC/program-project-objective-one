@@ -25,11 +25,11 @@ const ChatScreen = () => {
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const userId = route.params?.userId;
-  const partner = nearbyUsers.find((u) => u.id === userId);
+  const targetId = route.params?.partnerId || route.params?.userId;
+  const partner = nearbyUsers.find((u) => u.id === targetId);
 
   const [messageInput, setMessageInput] = useState('');
-  const [messages, setMessages] = useState(chatHistory[userId || ''] || []);
+  const [messages, setMessages] = useState(chatHistory[targetId || ''] || []);
 
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
@@ -92,12 +92,12 @@ const ChatScreen = () => {
 
   if (!partner) {
     return (
-      <View className="bg-background flex-1 items-center justify-center">
+      <View className="flex-1 items-center justify-center bg-background">
         <View className="items-center">
-          <Text className="font-technical text-muted-foreground mb-2 uppercase">
+          <Text className="mb-2 font-technical uppercase text-muted-foreground">
             User_Not_Found
           </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Inbox')}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text className="font-body text-primary underline">Return to Inbox</Text>
           </TouchableOpacity>
         </View>
@@ -108,66 +108,66 @@ const ChatScreen = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="bg-background flex-1"
+      className="flex-1 bg-background"
     >
       {/* Header Container */}
       <View
-        className="bg-card border-border z-10 border-b p-4"
+        className="z-10 border-b border-border bg-card p-4"
         style={{ paddingTop: Math.max(insets.top, 16) }}
       >
         <View className="mb-3 flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
             <TouchableOpacity
               onPress={() => navigation.goBack()}
-              className="hover:bg-muted rounded-sm p-2 transition-colors"
+              className="rounded-sm p-2 transition-colors hover:bg-muted"
             >
               <Ionicons name="arrow-back" size={24} color="#64748B" />
             </TouchableOpacity>
 
             <Image
               source={{ uri: partner.avatar }}
-              className="border-muted-foreground bg-muted h-10 w-10 rounded-sm border-2 border-solid"
+              className="h-10 w-10 rounded-sm border-2 border-solid border-muted-foreground bg-muted"
             />
 
             <View>
-              <Text className="font-body text-foreground font-medium">{partner.name}</Text>
+              <Text className="font-body font-medium text-foreground">{partner.name}</Text>
               <View className="flex-row items-center gap-1.5">
                 <View
                   className={`h-2 w-2 rounded-full ${partner.isOnline ? 'bg-green-500' : 'bg-gray-400'}`}
                 />
-                <Text className="font-technical text-muted-foreground text-xs uppercase">
+                <Text className="font-technical text-xs uppercase text-muted-foreground">
                   {partner.isOnline ? 'Active_Now' : 'Offline'}
                 </Text>
               </View>
             </View>
           </View>
 
-          <TouchableOpacity className="bg-accent flex-row items-center rounded-sm px-3 py-1 transition-opacity hover:opacity-90">
+          <TouchableOpacity className="flex-row items-center rounded-sm bg-accent px-3 py-1 transition-opacity hover:opacity-90">
             <Ionicons
               name="checkmark-circle"
               size={16}
               color="#FFFFFF"
               style={{ marginRight: 4 }}
             />
-            <Text className="font-technical text-accent-foreground text-sm uppercase tracking-wider">
+            <Text className="font-technical text-sm uppercase tracking-wider text-accent-foreground">
               Complete
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Context Bar */}
-        <View className="border-l-primary bg-primary/10 rounded-sm border-l-4 px-3 py-2">
-          <Text className="font-technical text-primary mb-1 text-xs uppercase tracking-wider">
+        <View className="bg-primary/10 rounded-sm border-l-4 border-l-primary px-3 py-2">
+          <Text className="mb-1 font-technical text-xs uppercase tracking-wider text-primary">
             Context_Bar
           </Text>
-          <Text className="font-body text-foreground text-sm">
+          <Text className="font-body text-sm text-foreground">
             Trading: React Development ↔ Guitar Lessons
           </Text>
         </View>
       </View>
 
       {/* Main Chat Area */}
-      <View className="bg-muted relative flex-1">
+      <View className="relative flex-1 bg-muted">
         <ScrollView
           ref={scrollViewRef}
           onScroll={handleScroll}
@@ -185,7 +185,7 @@ const ChatScreen = () => {
               return (
                 <View key={message.id} className="group mb-4">
                   <View className={`flex-row ${isSent ? 'justify-end' : 'justify-start'}`}>
-                    <View className="max-w-[75%">
+                    <View className="max-w-[75%]">
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onLongPress={() =>
@@ -202,7 +202,7 @@ const ChatScreen = () => {
                       </TouchableOpacity>
 
                       <Text
-                        className={`font-technical text-muted-foreground mt-1 px-1 text-xs ${isSent ? 'text-right' : 'text-left'}`}
+                        className={`mt-1 px-1 font-technical text-xs text-muted-foreground ${isSent ? 'text-right' : 'text-left'}`}
                       >
                         {message.timestamp.toLocaleTimeString('en-US', {
                           hour: 'numeric',
@@ -221,7 +221,7 @@ const ChatScreen = () => {
                         className="flex-row items-center rounded-full bg-[#E2E8F0] px-3 py-1.5 transition-opacity hover:opacity-80"
                       >
                         <Ionicons name="pencil" size={14} color="#4F46E5" />
-                        <Text className="font-technical ml-1 text-xs uppercase text-[#4F46E5]">
+                        <Text className="ml-1 font-technical text-xs uppercase text-[#4F46E5]">
                           Edit
                         </Text>
                       </TouchableOpacity>
@@ -231,7 +231,7 @@ const ChatScreen = () => {
                         className="flex-row items-center rounded-full bg-[#FEE2E2] px-3 py-1.5 transition-opacity hover:opacity-80"
                       >
                         <Ionicons name="trash" size={14} color="#EF4444" />
-                        <Text className="font-technical ml-1 text-xs uppercase text-[#EF4444]">
+                        <Text className="ml-1 font-technical text-xs uppercase text-[#EF4444]">
                           Delete
                         </Text>
                       </TouchableOpacity>
@@ -247,7 +247,7 @@ const ChatScreen = () => {
         {showJumpToBottom && (
           <TouchableOpacity
             onPress={scrollToBottom}
-            className="bg-card border-border absolute bottom-4 h-12 w-12 items-center justify-center rounded-full border shadow-lg ring-4"
+            className="absolute bottom-4 h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-lg ring-4"
             style={{ elevation: 5 }}
           >
             <Ionicons name="chevron-down" size={24} color="#64748B" />
@@ -257,14 +257,14 @@ const ChatScreen = () => {
 
       {/* Input Area */}
       <View
-        className="bg-card border-border z-10 border-t p-4"
+        className="z-10 border-t border-border bg-card p-4"
         style={{ paddingBottom: Math.max(insets.bottom, 16) }}
       >
         {editingMessageId && (
           <View className="bg-primary/10 border-primary/20 flex-row items-center justify-between border-b px-4 py-2">
             <View className="flex-row items-center gap-2">
               <Ionicons name="pencil" size={14} color="#4F46E5" />
-              <Text className="font-technical text-primary text-xs uppercase tracking-wider">
+              <Text className="font-technical text-xs uppercase tracking-wider text-primary">
                 Editing Message
               </Text>
             </View>
@@ -282,11 +282,11 @@ const ChatScreen = () => {
             returnKeyType={editingMessageId ? 'done' : 'send'}
             placeholder="Type your message..."
             placeholderTextColor="#64748B"
-            className="font-body border-border bg-muted text-foreground focus:border-primary flex-1 rounded-sm border-2 px-4 py-3 transition-colors focus:outline-none"
+            className="flex-1 rounded-sm border-2 border-border bg-muted px-4 py-3 font-body text-foreground transition-colors focus:border-primary focus:outline-none"
           />
           <TouchableOpacity
             onPress={handleSendMessage}
-            className="bg-primary items-center justify-center rounded-sm px-6 transition-opacity hover:opacity-90"
+            className="items-center justify-center rounded-sm bg-primary px-6 transition-opacity hover:opacity-90"
           >
             <Ionicons name={editingMessageId ? 'checkmark' : 'send'} size={20} color="#FFFFFF" />
           </TouchableOpacity>

@@ -1,33 +1,40 @@
 {
   "expo": {
     "name": "SWAPPA",
-    "slug": "client",
+    "slug": "swappa",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
+    "icon": "./assets/swappa-icon.png",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.miya.swappa",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#f1f5f9",
+        "foregroundImage": "./assets/swappa-foreground.png",
+        "monochromeImage": "./assets/swappa-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/favicon.ico",
       "bundler": "metro"
     },
-    "plugins": ["expo-font"]
+    "plugins": [
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f1f5f9",
+          "image": "./assets/swappa-foreground.png",
+          "dark": {
+            "backgroundColor": "#0f172a",
+            "image": "./assets/swappa-foreground.png"
+          }
+        }
+      ]
+    ]
   }
 }

@@ -5,16 +5,9 @@ import DesktopSidebar from '../components/DesktopSidebar';
 import { useNavigation } from '@react-navigation/native';
 import InboxScreen from '../screens/InboxScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-
-const PlaceholderScreen = ({ title }: { title: string }) => (
-  <View className="bg-background flex-1 items-center justify-center">
-    <Text className="text-foreground text-2xl font-medium">{title}</Text>
-  </View>
-);
-
-const MapScreen = () => <PlaceholderScreen title="Map View" />;
-const SearchScreen = () => <PlaceholderScreen title="Search Skills" />;
-const SwapsScreen = () => <PlaceholderScreen title="My Swaps" />;
+import SearchScreen from '../screens/SearchScreen';
+import SwapsScreen from '../screens/SwapsScreen';
+import DiscoveryMapScreen from '../screens/DiscoveryMapScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -23,7 +16,7 @@ export function MainTabNavigator() {
   const isDesktop = width >= 768;
 
   return (
-    <View className="bg-background flex-1 flex-row">
+    <View className="flex-1 flex-row bg-background">
       {isDesktop && <DesktopSidebar />}
 
       <View className="flex-1">
@@ -31,7 +24,7 @@ export function MainTabNavigator() {
           screenOptions={{ headerShown: false }}
           tabBar={(props) => (isDesktop ? null : <BottomNavigation {...props} />)}
         >
-          <Tab.Screen name="Map" component={MapScreen} />
+          <Tab.Screen name="Map" component={DiscoveryMapScreen} />
           <Tab.Screen name="Search" component={SearchScreen} />
           <Tab.Screen name="Swaps" component={SwapsScreen} />
           <Tab.Screen name="Inbox" component={InboxScreen} />

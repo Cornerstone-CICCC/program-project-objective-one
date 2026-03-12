@@ -67,7 +67,10 @@ const SettingsScreen = () => {
               </Text>
             </View>
 
-            <TouchableOpacity className="rounded-sm bg-primary px-4 py-2 active:opacity-80">
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ProfileEdit')}
+              className="rounded-sm bg-primary px-4 py-2 active:opacity-80"
+            >
               <Text className="font-technical text-sm uppercase tracking-wider text-primary-foreground">
                 Edit
               </Text>
