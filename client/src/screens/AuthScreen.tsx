@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,14 +13,22 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Defs, Line, Path, Pattern, Rect } from 'react-native-svg';
+import * as Location from 'expo-location';
+import { useNavigation } from '@react-navigation/native';
+import { login, signup } from '../api/auth';
+import zxcvbn from 'zxcvbn';
 
 const AuthScreen = () => {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+  const navigation = useNavigation<any>();
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -26,6 +36,11 @@ const AuthScreen = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    locationDisplay: '',
+    lat: null as number | null,
+    lng: null as number | null,
+    city: '',
+    address: '',
   });
 
   const handleModeSwitch = (newMode: 'login' | 'signup') => {
@@ -41,8 +56,147 @@ const AuthScreen = () => {
     }));
   };
 
-  const handleSubmit = () => {
-    console.log('Auth submit:', mode);
+  const handleAutoLocate = async () => {
+    setIsLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Denied',
+          'Please allow location access, or type your city manually.',
+        );
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+
+      const geo = await Location.reverseGeocodeAsync({ latitude, longitude });
+      if (geo.length > 0) {
+        const place = geo[0];
+        const cityStr = place.city || place.subregion || 'Unknown City';
+        const addressStr = place.name || place.street || cityStr;
+        const displayStr = `${cityStr}, ${place.region || place.country}`;
+
+        setFormData((prev) => ({
+          ...prev,
+          lat: latitude,
+          lng: longitude,
+          city: cityStr,
+          address: addressStr,
+          locationDisplay: displayStr,
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Location Error', 'Could not detect location. Please type it manually.');
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+
+    try {
+      if (mode === 'signup') {
+        const strength = zxcvbn(formData.password);
+        if (strength.score < 3) {
+          Alert.alert('Week Password', 'Please create a stronger password beofre continuing.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          Alert.alert('Password Mismatch', 'Your passwords do not match.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        let finalLat = formData.lat;
+        let finalLng = formData.lng;
+        let finalCity = formData.city;
+
+        if (!finalLat || !finalLng) {
+          if (!formData.locationDisplay.trim()) {
+            Alert.alert('Missing Info', 'Please provide your location to discover nearby trades.');
+            return;
+          }
+
+          try {
+            const geocoded = await Location.geocodeAsync(formData.locationDisplay);
+            if (geocoded.length > 0) {
+              finalLat = geocoded[0].latitude;
+              finalLng = geocoded[0].longitude;
+              finalCity = formData.locationDisplay.split(',')[0];
+            } else {
+              Alert.alert('Invalid Location', 'Could not find that city. Please try again.');
+              setIsSubmitting(false);
+              return;
+            }
+          } catch (err) {
+            Alert.alert('Error', 'Failed to search for that location.');
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
+        const signupPayload = {
+          firstname: formData.firstName,
+          lastname: formData.lastName,
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          lat: finalLat,
+          lng: finalLng,
+          city: finalCity,
+          address: formData.address || formData.locationDisplay,
+        };
+
+        const result = await signup(signupPayload);
+
+        if (result) {
+          Alert.alert('Success!', `Welcome to Swappa, ${result.user.firstname}!`);
+          navigation.replace('MainApp');
+        } else {
+          Alert.alert('Signup Failed', 'Please check your information and try again.');
+        }
+      } else {
+        // Handle Login
+        const result = await login({ email: formData.email, password: formData.password });
+
+        if (result) {
+          Alert.alert('Login Successful', `Welcome back, ${result.user.firstname}!`);
+          navigation.replace('MainApp');
+        } else {
+          Alert.alert('Login Failed', 'Incorrect email or password.');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Network Error', 'Something went wrong connecting to the server.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const passwordStrength = formData.password ? zxcvbn(formData.password) : { score: 0 };
+  const getMeterColor = (level: number) => {
+    if (!formData.password) return 'bg-[#E2E8F0]';
+    if (passwordStrength.score < level) return 'bg-[#E2E8F0]';
+
+    if (passwordStrength.score === 0) return 'bg-red-500';
+    if (passwordStrength.score === 1) return 'bg-orange-500';
+    if (passwordStrength.score === 2) return 'bg-yellow-500';
+    if (passwordStrength.score === 3) return 'bg-lime-500';
+    return 'bg-green-500';
+  };
+
+  const getMeterText = () => {
+    if (!formData.password) return 'Enter a password';
+    if (passwordStrength.score < 3) return 'Too Weak (Keep going!)';
+    if (passwordStrength.score === 3) return 'Strong (Good to go)';
+    return 'Very Strong (Excellent)';
   };
 
   return (
@@ -126,7 +280,7 @@ const AuthScreen = () => {
               <Circle cx="60" cy="20" r="2" fill="white" opacity="0.7" />
             </Svg>
 
-            <Text className="font-bungee mb-4 text-5xl font-bold uppercase tracking-wider text-white">
+            <Text className="mb-4 font-bungee text-5xl font-bold uppercase tracking-wider text-white">
               Swappa
             </Text>
             <View className="space-y-2 opacity-90">
@@ -237,7 +391,7 @@ const AuthScreen = () => {
                       <TextInput
                         value={formData.firstName}
                         onChangeText={(text) => setFormData({ ...formData, firstName: text })}
-                        className="font-body h-12 w-full rounded border border-[#0F172A] bg-white px-4 text-[#0F172A]"
+                        className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                         placeholder="Enter your first name"
                       />
                     </View>
@@ -248,7 +402,7 @@ const AuthScreen = () => {
                       <TextInput
                         value={formData.lastName}
                         onChangeText={(text) => setFormData({ ...formData, lastName: text })}
-                        className="font-body w-full rounded border border-[#0F172A] bg-white px-4 py-3 text-[#0F172A]"
+                        className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                         placeholder="Enter your last name"
                       />
                     </View>
@@ -262,9 +416,36 @@ const AuthScreen = () => {
                       value={formData.username}
                       onChangeText={(text) => setFormData({ ...formData, username: text })}
                       autoCapitalize="none"
-                      className="font-body w-full rounded border border-[#0F172A] bg-white px-4 py-3 text-[#0F172A]"
+                      className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                       placeholder="Enter your display name"
                     />
+                  </View>
+
+                  <View>
+                    <Text className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                      Location_Data
+                    </Text>
+                    <View className="flex-row items-center gap-2">
+                      <TextInput
+                        value={formData.locationDisplay}
+                        onChangeText={(text) => {
+                          setFormData({ ...formData, locationDisplay: text, lat: null, lng: null });
+                        }}
+                        className="h-12 flex-1 rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
+                        placeholder="e.g. Vancouver, BC"
+                      />
+                      <TouchableOpacity
+                        onPress={handleAutoLocate}
+                        disabled={isLocating}
+                        className="h-12 w-12 items-center justify-center rounded border border-[#0F172A] bg-[#F1F5F9] active:bg-[#E2E8F0]"
+                      >
+                        {isLocating ? (
+                          <ActivityIndicator size="small" color="#1E40AF" />
+                        ) : (
+                          <Ionicons name="location-outline" size={20} color="#1E40AF" />
+                        )}
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </>
               )}
@@ -279,7 +460,7 @@ const AuthScreen = () => {
                   onChangeText={(text) => setFormData({ ...formData, email: text })}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  className="font-body w-full rounded border border-[#0F172A] bg-white px-4 py-3 text-[#0F172A]"
+                  className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                   placeholder="user@example.com"
                 />
               </View>
@@ -293,7 +474,7 @@ const AuthScreen = () => {
                     value={formData.password}
                     onChangeText={(text) => setFormData({ ...formData, password: text })}
                     secureTextEntry={!showPassword}
-                    className="font-body w-full rounded border border-[#0F172A] bg-white px-4 py-3 text-[#0F172A]"
+                    className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                     placeholder="Enter your password"
                   />
                   <TouchableOpacity
@@ -303,6 +484,24 @@ const AuthScreen = () => {
                     <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#64748B" />
                   </TouchableOpacity>
                 </View>
+
+                {mode === 'signup' && (
+                  <View className="mt-2">
+                    <View className="flex-row gap-1">
+                      {[0, 1, 2, 3, 4].map((level) => (
+                        <View
+                          key={level}
+                          className={`h-1.5 flex-1 rounded-sm ${getMeterColor(level)}`}
+                        />
+                      ))}
+                    </View>
+                    <Text
+                      className={`mt-1 text-right font-mono text-[10px] uppercase tracking-wider ${!formData.password ? 'text-[#64748B]' : passwordStrength.score < 3 ? 'text-red-500' : 'text-green-600'}`}
+                    >
+                      {getMeterText()}
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* Conditional Confirm Password */}
@@ -316,7 +515,7 @@ const AuthScreen = () => {
                       value={formData.confirmPassword}
                       onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
                       secureTextEntry={!showConfirmPassword}
-                      className="font-body w-full rounded border border-[#0F172A] bg-white px-4 py-3 text-[#0F172A]"
+                      className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                       placeholder="Confirm your password"
                     />
                     <TouchableOpacity
@@ -336,10 +535,18 @@ const AuthScreen = () => {
               {/* Submit Button */}
               <TouchableOpacity
                 onPress={handleSubmit}
-                className="mt-2 w-full items-center rounded bg-[#1E40AF] py-4"
+                disabled={isSubmitting}
+                className={`mt-2 w-full flex-row items-center justify-center rounded py-4 ${isSubmitting ? 'bg-[#1E40AF]/80' : 'bg-[#1E40AF]'}`}
               >
+                {isSubmitting && (
+                  <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                )}
                 <Text className="font-mono text-sm font-bold uppercase tracking-wider text-white">
-                  {mode === 'login' ? 'Authenticate_Session' : 'Initiate_Blueprint'}
+                  {isSubmitting
+                    ? 'Processing...'
+                    : mode === 'login'
+                      ? 'Authenticate_Session'
+                      : 'Initiate_Blueprint'}
                 </Text>
               </TouchableOpacity>
 
@@ -357,7 +564,7 @@ const AuthScreen = () => {
             <View className="absolute bottom-2 right-2 h-4 w-4 border-b-2 border-r-2 border-[#EAB308]" />
           </View>
 
-          <Text className="font-body mt-6 text-center text-xs text-[#64748B]">
+          <Text className="mt-6 text-center font-body text-xs text-[#64748B]">
             By continuing, you agree to Swappa's Terms of Service and Privacy Policy
           </Text>
         </ScrollView>

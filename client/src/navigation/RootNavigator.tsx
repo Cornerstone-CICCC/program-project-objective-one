@@ -15,7 +15,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 const Stack = createNativeStackNavigator();
 
 const RootNavigator = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

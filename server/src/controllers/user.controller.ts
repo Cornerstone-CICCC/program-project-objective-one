@@ -4,6 +4,22 @@ import { generateToken } from '../utils/auth.utils';
 import { User } from '../models/user.model';
 import userService from '../services/user.service';
 import zxcvbn from 'zxcvbn';
+import { UserSkill } from '../models/userSkill.model';
+
+// Fetch a user's skills
+const fetchUserSkills = async (userId: string | any) => {
+  const userSkills = await UserSkill.find({ user_id: userId }).populate('skill_id');
+
+  const offering = userSkills
+    .filter((userSkill) => userSkill.type === 'TEACH')
+    .map((userSkill) => (userSkill.skill_id as any).name);
+
+  const seeking = userSkills
+    .filter((userSkill) => userSkill.type === 'LEARN')
+    .map((userSkill) => (userSkill.skill_id as any).name);
+
+  return { offering, seeking };
+};
 
 /**
  * Sign up (Register User + Location)
@@ -74,6 +90,8 @@ const signup = async (req: Request, res: Response) => {
       });
     }
 
+    await newUser.populate('location_id');
+
     // Generate token
     const token = generateToken(newUser._id.toString());
 
@@ -122,6 +140,9 @@ const login = async (req: Request, res: Response) => {
     const { user } = result;
     const token = generateToken(user._id.toString());
 
+    await user.populate('location_id');
+    const { offering, seeking } = await fetchUserSkills(user._id);
+
     res.status(200).json({
       message: 'Login successful!',
       token,
@@ -133,6 +154,8 @@ const login = async (req: Request, res: Response) => {
         username: user.username,
         avatar_url: user.avatar_url,
         location_id: user.location_id,
+        offering,
+        seeking,
       },
     });
   } catch (err) {
@@ -149,7 +172,22 @@ const login = async (req: Request, res: Response) => {
 const getAllUsers = async (req: Request, res: Response) => {
   try {
     const users = await userService.getAll();
-    res.status(200).json(users);
+
+    await User.populate(users, { path: 'location_id' });
+
+    const usersWithSkills = await Promise.all(
+      users.map(async (user) => {
+        const { offering, seeking } = await fetchUserSkills(user._id);
+        return {
+          ...user.toObject(),
+          location: user.location_id,
+          offering,
+          seeking,
+        };
+      }),
+    );
+
+    res.status(200).json(usersWithSkills);
   } catch (err) {
     console.error('Get all users error:', err);
     res.status(500).json({
@@ -173,9 +211,18 @@ const getUserById = async (req: Request<{ id: string }>, res: Response) => {
       });
     }
 
+    await user.populate('location_id');
+
     const { email, password, ...publicUser } = user.toObject();
 
-    res.status(200).json(publicUser);
+    const { offering, seeking } = await fetchUserSkills(user._id);
+
+    res.status(200).json({
+      ...publicUser,
+      location: user.location_id,
+      offering,
+      seeking,
+    });
   } catch (err) {
     console.error('Get user by ID error:', err);
     res.status(500).json({
@@ -205,7 +252,15 @@ const getMe = async (req: Request, res: Response) => {
     });
   }
 
-  res.status(200).json(user);
+  await user.populate('location_id');
+  const { offering, seeking } = await fetchUserSkills(user._id);
+
+  res.status(200).json({
+    ...user.toObject(),
+    location: user.location_id,
+    offering,
+    seeking,
+  });
 };
 
 /**
@@ -280,9 +335,17 @@ const updateAccount = async (req: Request, res: Response) => {
 
     const updatedUser = await userService.update(userId, updateData);
 
+    await updatedUser?.populate('location_id');
+    const { offering, seeking } = await fetchUserSkills(userId);
+
     res.status(200).json({
       message: 'Profile updated successfully!',
-      user: updatedUser,
+      user: {
+        ...updatedUser?.toObject(),
+        location: updatedUser?.location_id,
+        offering,
+        seeking,
+      },
     });
   } catch (err) {
     (console.error('Update Error'),

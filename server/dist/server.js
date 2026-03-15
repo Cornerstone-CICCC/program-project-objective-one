@@ -5,6 +5,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 // Server code
 const express_1 = __importDefault(require("express"));
+const http_1 = require("http");
+const socket_io_1 = require("socket.io");
+const chat_socket_1 = require("./sockets/chat.socket");
 const cors_1 = __importDefault(require("cors"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -19,6 +22,7 @@ const message_routes_1 = __importDefault(require("./routes/message.routes"));
 dotenv_1.default.config();
 // Create server
 const app = (0, express_1.default)();
+const server = (0, http_1.createServer)(app);
 // Define allowed origins
 const allowedOrigins = [
     process.env.FRONTEND_URL,
@@ -26,6 +30,16 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 ].filter((origin) => !!origin);
+// Initialize Socket.io
+const io = new socket_io_1.Server(server, {
+    cors: {
+        origin: allowedOrigins,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    },
+});
+// Connect the socket logic
+(0, chat_socket_1.setupSockets)(io);
 // Middleware
 app.use((0, cors_1.default)({
     origin: allowedOrigins,
@@ -50,7 +64,7 @@ mongoose_1.default
     .connect(MONGO_URI, { dbName: 'swappa' })
     .then(() => {
     console.log('Connected to MongoDB database');
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
         console.log(`Server is running on http://localhost:${PORT}`);
     });
 })

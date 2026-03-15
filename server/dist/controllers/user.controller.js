@@ -28,6 +28,18 @@ const auth_utils_1 = require("../utils/auth.utils");
 const user_model_1 = require("../models/user.model");
 const user_service_1 = __importDefault(require("../services/user.service"));
 const zxcvbn_1 = __importDefault(require("zxcvbn"));
+const userSkill_model_1 = require("../models/userSkill.model");
+// Fetch a user's skills
+const fetchUserSkills = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const userSkills = yield userSkill_model_1.UserSkill.find({ user_id: userId }).populate('skill_id');
+    const offering = userSkills
+        .filter((userSkill) => userSkill.type === 'TEACH')
+        .map((userSkill) => userSkill.skill_id.name);
+    const seeking = userSkills
+        .filter((userSkill) => userSkill.type === 'LEARN')
+        .map((userSkill) => userSkill.skill_id.name);
+    return { offering, seeking };
+});
 /**
  * Sign up (Register User + Location)
  * @route POST /users/signup
@@ -82,6 +94,7 @@ const signup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 message: 'Failed to create user.',
             });
         }
+        yield newUser.populate('location_id');
         // Generate token
         const token = (0, auth_utils_1.generateToken)(newUser._id.toString());
         res.status(201).json({
@@ -124,6 +137,8 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         const { user } = result;
         const token = (0, auth_utils_1.generateToken)(user._id.toString());
+        yield user.populate('location_id');
+        const { offering, seeking } = yield fetchUserSkills(user._id);
         res.status(200).json({
             message: 'Login successful!',
             token,
@@ -135,6 +150,8 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 username: user.username,
                 avatar_url: user.avatar_url,
                 location_id: user.location_id,
+                offering,
+                seeking,
             },
         });
     }
@@ -151,7 +168,13 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const users = yield user_service_1.default.getAll();
-        res.status(200).json(users);
+        yield user_model_1.User.populate(users, { path: 'location_id' });
+        const usersWithSkills = yield Promise.all(users.map((user) => __awaiter(void 0, void 0, void 0, function* () {
+            const { offering, seeking } = yield fetchUserSkills(user._id);
+            return Object.assign(Object.assign({}, user.toObject()), { location: user.location_id, offering,
+                seeking });
+        })));
+        res.status(200).json(usersWithSkills);
     }
     catch (err) {
         console.error('Get all users error:', err);
@@ -173,8 +196,11 @@ const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 message: 'User not found.',
             });
         }
+        yield user.populate('location_id');
         const _a = user.toObject(), { email, password } = _a, publicUser = __rest(_a, ["email", "password"]);
-        res.status(200).json(publicUser);
+        const { offering, seeking } = yield fetchUserSkills(user._id);
+        res.status(200).json(Object.assign(Object.assign({}, publicUser), { location: user.location_id, offering,
+            seeking }));
     }
     catch (err) {
         console.error('Get user by ID error:', err);
@@ -201,7 +227,10 @@ const getMe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             message: 'User not found.',
         });
     }
-    res.status(200).json(user);
+    yield user.populate('location_id');
+    const { offering, seeking } = yield fetchUserSkills(user._id);
+    res.status(200).json(Object.assign(Object.assign({}, user.toObject()), { location: user.location_id, offering,
+        seeking }));
 });
 /**
  * Update Profile
@@ -265,9 +294,12 @@ const updateAccount = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             password: finalPassword,
         };
         const updatedUser = yield user_service_1.default.update(userId, updateData);
+        yield (updatedUser === null || updatedUser === void 0 ? void 0 : updatedUser.populate('location_id'));
+        const { offering, seeking } = yield fetchUserSkills(userId);
         res.status(200).json({
             message: 'Profile updated successfully!',
-            user: updatedUser,
+            user: Object.assign(Object.assign({}, updatedUser === null || updatedUser === void 0 ? void 0 : updatedUser.toObject()), { location: updatedUser === null || updatedUser === void 0 ? void 0 : updatedUser.location_id, offering,
+                seeking }),
         });
     }
     catch (err) {
