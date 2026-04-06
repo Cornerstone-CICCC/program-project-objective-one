@@ -1,14 +1,47 @@
 import { TouchableOpacity, View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { messages } from '../data/mockData';
+import { useEffect, useState } from 'react';
+import { getConversations } from '../api/message';
+import { socketService } from '../sockets/socket';
 
 const BottomNavigation = ({ state, navigation }: any) => {
   const insets = useSafeAreaInsets();
-  const unreadCount = messages.filter((msg) => msg.unread).length;
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const currentRouteName = state.routes[state.index].name;
+
+  const fetchUnreadCount = async () => {
+    try {
+      const conversations = await getConversations();
+      const total = conversations.reduce(
+        (sum: number, conversation: any) => sum + conversation.unreadCount,
+        0,
+      );
+      setUnreadCount(total);
+    } catch (err) {
+      console.error('Failed to fetch unread count:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [currentRouteName]);
+
+  useEffect(() => {
+    const socket = socketService.socket;
+    if (!socket) return;
+
+    const handleNewMessage = () => {
+      fetchUnreadCount();
+    };
+
+    socket.on('new_message', handleNewMessage);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+    };
+  }, []);
 
   const navItems = [
     { name: 'Map', activeIcon: 'map', inactiveIcon: 'map-outline', label: 'Map' },
@@ -30,7 +63,7 @@ const BottomNavigation = ({ state, navigation }: any) => {
 
   return (
     <View
-      className="bg-card border-border absolute bottom-0 left-0 right-0 z-50 flex-row justify-around border-t pt-3 shadow-sm"
+      className="absolute bottom-0 left-0 right-0 z-50 flex-row justify-around border-t border-border bg-card pt-3 shadow-sm"
       style={{ paddingBottom: insets.bottom }}
     >
       {navItems.map(({ name, activeIcon, inactiveIcon, label }) => {
@@ -53,15 +86,15 @@ const BottomNavigation = ({ state, navigation }: any) => {
 
             {/* Label */}
             <Text
-              className={`font-technical text-[10px] uppercase tracking-wider ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}
+              className={`font-technical text-[10px] uppercase tracking-wider ${isActive ? 'font-medium text-primary' : 'text-muted-foreground'}`}
             >
               {label}
             </Text>
 
             {/* Notification Badge */}
             {name === 'Inbox' && unreadCount > 0 && (
-              <View className="bg-accent absolute right-7 top-2 h-[18px] min-w-[18px] items-center justify-center rounded-full px-1">
-                <Text className="text-accent-foreground text-center text-[10px] font-bold">
+              <View className="absolute right-7 top-2 h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent px-1">
+                <Text className="text-center text-[10px] font-bold text-accent-foreground">
                   {unreadCount}
                 </Text>
               </View>

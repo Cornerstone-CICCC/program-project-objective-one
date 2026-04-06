@@ -1,10 +1,13 @@
 import * as SecureStore from 'expo-secure-store';
 import { BASE_URL } from '.';
+import { Platform } from 'react-native';
 
 export interface ILocationData {
   _id: string;
   city: string;
-  address: string;
+  province: string;
+  country: string;
+  address?: string;
   geo_location: {
     type: string;
     coordinates: [number, number]; // [lng, lat]
@@ -23,6 +26,8 @@ export interface IUser {
   location?: ILocationData;
   offering?: string[];
   seeking?: string[];
+  average_rating?: number;
+  total_reviews?: number;
 }
 
 export interface SignupUser {
@@ -33,24 +38,15 @@ export interface SignupUser {
   password: string;
   lat: number;
   lng: number;
-  address: string;
   city: string;
+  province: string;
+  country: string;
+  address?: string;
 }
 
 export interface Login {
   email: string;
   password: string;
-}
-
-export interface UpdateProfileData {
-  firstname?: string;
-  lastname?: string;
-  username?: string;
-  email?: string;
-  bio?: string;
-  avatar_url?: string;
-  currPassword?: string;
-  newPassword?: string;
 }
 
 export interface AuthResultType {
@@ -59,8 +55,32 @@ export interface AuthResultType {
   token?: string;
 }
 
-const getAuthHeaders = async () => {
-  const token = await SecureStore.getItemAsync('jwt_token');
+export const saveToken = async (token: string) => {
+  if (Platform.OS === 'web') {
+    localStorage.setItem('jwt_token', token);
+  } else {
+    await SecureStore.setItemAsync('jwt_token', token);
+  }
+};
+
+export const getToken = async () => {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('jwt_token');
+  } else {
+    return await SecureStore.getItemAsync('jwt_token');
+  }
+};
+
+export const clearToken = async () => {
+  if (Platform.OS === 'web') {
+    localStorage.removeItem('jwt_token');
+  } else {
+    await SecureStore.deleteItemAsync('jwt_token');
+  }
+};
+
+export const getAuthHeaders = async () => {
+  const token = await getToken();
   return {
     'content-type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -82,7 +102,7 @@ export const signup = async (signupInfo: SignupUser): Promise<AuthResultType | n
     }
 
     const data: AuthResultType = await res.json();
-    if (data.token) await SecureStore.setItemAsync('jwt_token', data.token);
+    if (data.token) await saveToken(data.token);
 
     return data;
   } catch (err) {
@@ -106,7 +126,7 @@ export const login = async (loginInfo: Login): Promise<AuthResultType | null> =>
     }
 
     const data: AuthResultType = await res.json();
-    if (data.token) await SecureStore.setItemAsync('jwt_token', data.token);
+    if (data.token) await saveToken(data.token);
 
     return data;
   } catch (err) {
@@ -123,7 +143,11 @@ export const checkAuth = async (): Promise<IUser | null> => {
       headers,
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`checkAuth Failed! Status: ${res.status}. Message:`, errorText);
+      return null;
+    }
 
     const data: IUser = await res.json();
     return data;
@@ -133,52 +157,12 @@ export const checkAuth = async (): Promise<IUser | null> => {
   }
 };
 
-export const updateProfile = async (
-  updateInfo: UpdateProfileData,
-): Promise<AuthResultType | null> => {
-  try {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${BASE_URL}/users/profile`, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify(updateInfo),
-    });
-
-    if (!res.ok) return null;
-
-    const data: AuthResultType = await res.json();
-    return data;
-  } catch (err) {
-    console.error('Update profile error:', err);
-    return null;
-  }
-};
-
 export const logout = async (): Promise<boolean> => {
   try {
-    await SecureStore.deleteItemAsync('jwt_token');
+    await clearToken();
     return true;
   } catch (err) {
     console.error('Logout error:', err);
-    return false;
-  }
-};
-
-export const deleteAccount = async (): Promise<boolean> => {
-  try {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${BASE_URL}/users/delete`, {
-      method: 'DELETE',
-      headers,
-    });
-
-    if (res.ok) {
-      await SecureStore.deleteItemAsync('jwt_token');
-      return true;
-    }
-    return false;
-  } catch (err) {
-    console.error('Delete account error:', err);
     return false;
   }
 };

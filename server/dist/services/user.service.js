@@ -16,6 +16,7 @@ const user_model_1 = require("../models/user.model");
 const location_model_1 = require("../models/location.model");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const mongoose_1 = __importDefault(require("mongoose"));
+const userSkill_model_1 = require("../models/userSkill.model");
 // Get all users
 const getAll = () => __awaiter(void 0, void 0, void 0, function* () {
     return yield user_model_1.User.find().select('-password');
@@ -46,6 +47,8 @@ const registerWithLocation = (userData, locationData) => __awaiter(void 0, void 
         },
         address: locationData.address,
         city: locationData.city,
+        province: locationData.province,
+        country: locationData.country,
     });
     const newUser = yield user_model_1.User.create({
         _id: userId,
@@ -63,15 +66,11 @@ const update = (id, data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield user_model_1.User.findByIdAndUpdate(id, data, { new: true, runValidators: true });
 });
 // Increment trade stats
-const updateTradeStats = (id, newRating) => __awaiter(void 0, void 0, void 0, function* () {
+const updateTradeStats = (id) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield user_model_1.User.findById(id);
     if (!user)
         return null;
-    const currentTotal = user.average_rating * user.total_trades;
-    const newTotalTrades = user.total_trades + 1;
-    const newAverage = (currentTotal + newRating) / newTotalTrades;
-    user.total_trades = newTotalTrades;
-    user.average_rating = Number(newAverage.toFixed(2));
+    user.total_trades = user.total_trades + 1;
     return yield user.save();
 });
 // Login user
@@ -92,6 +91,7 @@ const login = (details) => __awaiter(void 0, void 0, void 0, function* () {
 // Delete user
 const remove = (id) => __awaiter(void 0, void 0, void 0, function* () {
     yield location_model_1.Location.findOneAndDelete({ user_id: id });
+    yield userSkill_model_1.UserSkill.deleteMany({ user_id: id });
     const deleteUser = yield user_model_1.User.findByIdAndDelete(id);
     return deleteUser;
 });

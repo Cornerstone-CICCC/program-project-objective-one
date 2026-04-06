@@ -6,7 +6,7 @@ export interface IRating extends Document {
   reviewee_id: mongoose.Types.ObjectId;
   score: number;
   comment?: string;
-  created_at: Date;
+  createdAt: Date;
 }
 
 const RatingSchema: Schema = new Schema(

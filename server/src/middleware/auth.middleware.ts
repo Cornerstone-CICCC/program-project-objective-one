@@ -13,6 +13,10 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
     try {
       token = req.headers.authorization.split(' ')[1];
 
+      if (token === 'null' || token === 'undefined') {
+        throw new Error('Malformed token string');
+      }
+
       const decoded = verifyToken(token);
 
       // Check if user still exists in DB
@@ -27,16 +31,18 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       req.user = user;
 
       next();
+
+      return;
     } catch (err) {
       console.error('Auth middleware error:', err);
-      res.status(401).json({
+      return res.status(401).json({
         message: 'Not authorized, token failed.',
       });
     }
   }
 
   if (!token) {
-    res.status(401).json({
+    return res.status(401).json({
       message: 'Not authorized, no token.',
     });
   }

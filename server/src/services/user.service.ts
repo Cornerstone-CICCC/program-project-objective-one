@@ -2,6 +2,7 @@ import { User, IUser } from '../models/user.model';
 import { Location } from '../models/location.model';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
+import { UserSkill } from '../models/userSkill.model';
 
 // Get all users
 const getAll = async () => {
@@ -39,6 +40,8 @@ const registerWithLocation = async (userData: any, locationData: any) => {
     },
     address: locationData.address,
     city: locationData.city,
+    province: locationData.province,
+    country: locationData.country,
   });
 
   const newUser = await User.create({
@@ -60,16 +63,11 @@ const update = async (id: string, data: Partial<IUser>) => {
 };
 
 // Increment trade stats
-const updateTradeStats = async (id: string, newRating: number) => {
+const updateTradeStats = async (id: string) => {
   const user = await User.findById(id);
   if (!user) return null;
 
-  const currentTotal = user.average_rating * user.total_trades;
-  const newTotalTrades = user.total_trades + 1;
-  const newAverage = (currentTotal + newRating) / newTotalTrades;
-
-  user.total_trades = newTotalTrades;
-  user.average_rating = Number(newAverage.toFixed(2));
+  user.total_trades = user.total_trades + 1;
 
   return await user.save();
 };
@@ -100,6 +98,8 @@ const login = async (details: IUserLogin) => {
 // Delete user
 const remove = async (id: string) => {
   await Location.findOneAndDelete({ user_id: id });
+
+  await UserSkill.deleteMany({ user_id: id });
 
   const deleteUser = await User.findByIdAndDelete(id);
 

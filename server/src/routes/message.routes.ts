@@ -6,6 +6,9 @@ const messageRouter = Router();
 
 messageRouter.use(protect);
 
+messageRouter.get('/conversations', messageController.getConversations);
+messageRouter.put('/:tradeId/read', messageController.markAsRead);
+
 messageRouter.post('/', messageController.sendMessage);
 messageRouter.get('/:tradeId', messageController.getTradeMessages);
 messageRouter.put('/:id', messageController.editMessage);

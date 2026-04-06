@@ -5,6 +5,7 @@ import { User } from '../models/user.model';
 import userService from '../services/user.service';
 import zxcvbn from 'zxcvbn';
 import { UserSkill } from '../models/userSkill.model';
+import { v2 as cloudinary } from 'cloudinary';
 
 // Fetch a user's skills
 const fetchUserSkills = async (userId: string | any) => {
@@ -26,7 +27,19 @@ const fetchUserSkills = async (userId: string | any) => {
  * @route POST /users/signup
  */
 const signup = async (req: Request, res: Response) => {
-  const { firstname, lastname, username, email, password, lat, lng, address, city } = req.body;
+  const {
+    firstname,
+    lastname,
+    username,
+    email,
+    password,
+    lat,
+    lng,
+    address,
+    city,
+    province,
+    country,
+  } = req.body;
 
   // Validate basic fields
   if (
@@ -42,9 +55,9 @@ const signup = async (req: Request, res: Response) => {
   }
 
   // Validate location fields
-  if (lat === undefined || lng === undefined || !address || !city) {
+  if (lat === undefined || lng === undefined || !city || !province || !country) {
     return res.status(400).json({
-      message: 'Location data (lat, lng, address, city) is required!',
+      message: 'Location data (lat, lng, city, province, country) is required!',
     });
   }
 
@@ -81,7 +94,7 @@ const signup = async (req: Request, res: Response) => {
   try {
     const newUser = await userService.registerWithLocation(
       { firstname, lastname, username, email, password },
-      { lat, lng, address, city },
+      { lat, lng, address, city, province, country },
     );
 
     if (!newUser) {
@@ -104,7 +117,11 @@ const signup = async (req: Request, res: Response) => {
         lastname: newUser.lastname,
         username: newUser.username,
         email: newUser.email,
-        location_id: newUser.location_id,
+        avatar_url: newUser.avatar_url,
+        bio: newUser.bio,
+        location: newUser.location_id,
+        average_rating: newUser.average_rating,
+        total_reviews: newUser.total_reviews,
       },
     });
   } catch (err) {
@@ -140,7 +157,6 @@ const login = async (req: Request, res: Response) => {
     const { user } = result;
     const token = generateToken(user._id.toString());
 
-    await user.populate('location_id');
     const { offering, seeking } = await fetchUserSkills(user._id);
 
     res.status(200).json({
@@ -153,12 +169,16 @@ const login = async (req: Request, res: Response) => {
         lastname: user.lastname,
         username: user.username,
         avatar_url: user.avatar_url,
-        location_id: user.location_id,
+        bio: user.bio,
+        location: user.location_id,
+        average_rating: user.average_rating,
+        total_reviews: user.total_reviews,
         offering,
         seeking,
       },
     });
   } catch (err) {
+    console.error('Login Error:', err);
     res.status(500).json({
       message: 'Unable to login.',
     });
@@ -211,8 +231,6 @@ const getUserById = async (req: Request<{ id: string }>, res: Response) => {
       });
     }
 
-    await user.populate('location_id');
-
     const { email, password, ...publicUser } = user.toObject();
 
     const { offering, seeking } = await fetchUserSkills(user._id);
@@ -236,7 +254,7 @@ const getUserById = async (req: Request<{ id: string }>, res: Response) => {
  * @route GET /users/me
  */
 const getMe = async (req: Request, res: Response) => {
-  const userId = (req as any).user?.id;
+  const userId = (req as any).user?._id || (req as any).user?.id;
 
   if (!userId) {
     return res.status(401).json({
@@ -252,7 +270,6 @@ const getMe = async (req: Request, res: Response) => {
     });
   }
 
-  await user.populate('location_id');
   const { offering, seeking } = await fetchUserSkills(user._id);
 
   res.status(200).json({
@@ -268,7 +285,7 @@ const getMe = async (req: Request, res: Response) => {
  * @route PUT /users/profile
  */
 const updateAccount = async (req: Request, res: Response) => {
-  const userId = (req as any).user?.id;
+  const userId = (req as any).user?._id || (req as any).user?.id;
   const { firstname, lastname, username, email, currPassword, newPassword, bio, avatar_url } =
     req.body;
 
@@ -288,7 +305,7 @@ const updateAccount = async (req: Request, res: Response) => {
         });
       }
 
-      const isMatch = await bcrypt.compare(currPassword, newPassword);
+      const isMatch = await bcrypt.compare(currPassword, user.password);
       if (!isMatch) {
         return res.status(400).json({
           message: 'Incorrect current password.',
@@ -348,10 +365,10 @@ const updateAccount = async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    (console.error('Update Error'),
-      res.status(500).json({
-        message: 'Server error during update.',
-      }));
+    console.error('Update Error', err);
+    res.status(500).json({
+      message: 'Server error during update.',
+    });
   }
 };
 
@@ -360,7 +377,7 @@ const updateAccount = async (req: Request, res: Response) => {
  * @route DELETE /users/delete
  */
 const deleteAccount = async (req: Request, res: Response) => {
-  const userId = (req as any).user?.id;
+  const userId = (req as any).user?._id || (req as any).user?.id;
 
   const deleted = await userService.remove(userId);
 
@@ -375,6 +392,44 @@ const deleteAccount = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * Upload Avatar to Cloudinary
+ * @route POST /users/upload-avatar
+ */
+const uploadAvatar = async (req: Request, res: Response) => {
+  try {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+
+    if (!req.file) {
+      return res.status(400).json({
+        message: 'No image file provided.',
+      });
+    }
+
+    const b64 = Buffer.from(req.file.buffer).toString('base64');
+    const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+    const result = await cloudinary.uploader.upload(dataURI, {
+      folder: 'swappa_avatars',
+      transformation: [{ width: 500, height: 500, crop: 'fill', gravity: 'face' }],
+    });
+
+    res.status(200).json({
+      message: 'Image uploaded successfully',
+      secure_url: result.secure_url,
+    });
+  } catch (err) {
+    console.error('Cloudinary backend error:', err);
+    res.status(500).json({
+      message: 'Failed to upload image securely.',
+    });
+  }
+};
+
 export default {
   signup,
   login,
@@ -383,4 +438,5 @@ export default {
   getMe,
   updateAccount,
   deleteAccount,
+  uploadAvatar,
 };

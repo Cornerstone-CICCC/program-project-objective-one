@@ -10,6 +10,8 @@ const tradeRouter = (0, express_1.Router)();
 tradeRouter.use(auth_middleware_1.protect);
 tradeRouter.post('/', trade_controller_1.default.createTrade);
 tradeRouter.get('/me', trade_controller_1.default.getMyTrades);
+tradeRouter.get('/user/:userId', trade_controller_1.default.getUserTrades);
 tradeRouter.get('/:id', trade_controller_1.default.getTradeById);
 tradeRouter.put('/:id/status', trade_controller_1.default.updateTradeStatus);
+tradeRouter.put('/:id/hide', trade_controller_1.default.hideTrade);
 exports.default = tradeRouter;

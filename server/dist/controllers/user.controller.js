@@ -29,6 +29,7 @@ const user_model_1 = require("../models/user.model");
 const user_service_1 = __importDefault(require("../services/user.service"));
 const zxcvbn_1 = __importDefault(require("zxcvbn"));
 const userSkill_model_1 = require("../models/userSkill.model");
+const cloudinary_1 = require("cloudinary");
 // Fetch a user's skills
 const fetchUserSkills = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const userSkills = yield userSkill_model_1.UserSkill.find({ user_id: userId }).populate('skill_id');
@@ -45,7 +46,7 @@ const fetchUserSkills = (userId) => __awaiter(void 0, void 0, void 0, function* 
  * @route POST /users/signup
  */
 const signup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { firstname, lastname, username, email, password, lat, lng, address, city } = req.body;
+    const { firstname, lastname, username, email, password, lat, lng, address, city, province, country, } = req.body;
     // Validate basic fields
     if (!(firstname === null || firstname === void 0 ? void 0 : firstname.trim()) ||
         !(lastname === null || lastname === void 0 ? void 0 : lastname.trim()) ||
@@ -57,9 +58,9 @@ const signup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
     // Validate location fields
-    if (lat === undefined || lng === undefined || !address || !city) {
+    if (lat === undefined || lng === undefined || !city || !province || !country) {
         return res.status(400).json({
-            message: 'Location data (lat, lng, address, city) is required!',
+            message: 'Location data (lat, lng, city, province, country) is required!',
         });
     }
     // Password strength check
@@ -88,7 +89,7 @@ const signup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
     }
     try {
-        const newUser = yield user_service_1.default.registerWithLocation({ firstname, lastname, username, email, password }, { lat, lng, address, city });
+        const newUser = yield user_service_1.default.registerWithLocation({ firstname, lastname, username, email, password }, { lat, lng, address, city, province, country });
         if (!newUser) {
             return res.status(409).json({
                 message: 'Failed to create user.',
@@ -106,7 +107,11 @@ const signup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 lastname: newUser.lastname,
                 username: newUser.username,
                 email: newUser.email,
-                location_id: newUser.location_id,
+                avatar_url: newUser.avatar_url,
+                bio: newUser.bio,
+                location: newUser.location_id,
+                average_rating: newUser.average_rating,
+                total_reviews: newUser.total_reviews,
             },
         });
     }
@@ -137,7 +142,6 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         const { user } = result;
         const token = (0, auth_utils_1.generateToken)(user._id.toString());
-        yield user.populate('location_id');
         const { offering, seeking } = yield fetchUserSkills(user._id);
         res.status(200).json({
             message: 'Login successful!',
@@ -149,13 +153,17 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 lastname: user.lastname,
                 username: user.username,
                 avatar_url: user.avatar_url,
-                location_id: user.location_id,
+                bio: user.bio,
+                location: user.location_id,
+                average_rating: user.average_rating,
+                total_reviews: user.total_reviews,
                 offering,
                 seeking,
             },
         });
     }
     catch (err) {
+        console.error('Login Error:', err);
         res.status(500).json({
             message: 'Unable to login.',
         });
@@ -196,7 +204,6 @@ const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 message: 'User not found.',
             });
         }
-        yield user.populate('location_id');
         const _a = user.toObject(), { email, password } = _a, publicUser = __rest(_a, ["email", "password"]);
         const { offering, seeking } = yield fetchUserSkills(user._id);
         res.status(200).json(Object.assign(Object.assign({}, publicUser), { location: user.location_id, offering,
@@ -214,8 +221,8 @@ const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
  * @route GET /users/me
  */
 const getMe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    var _a, _b;
+    const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
     if (!userId) {
         return res.status(401).json({
             message: 'Not authorized.',
@@ -227,7 +234,6 @@ const getMe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             message: 'User not found.',
         });
     }
-    yield user.populate('location_id');
     const { offering, seeking } = yield fetchUserSkills(user._id);
     res.status(200).json(Object.assign(Object.assign({}, user.toObject()), { location: user.location_id, offering,
         seeking }));
@@ -237,8 +243,8 @@ const getMe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
  * @route PUT /users/profile
  */
 const updateAccount = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    var _a, _b;
+    const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
     const { firstname, lastname, username, email, currPassword, newPassword, bio, avatar_url } = req.body;
     try {
         const user = yield user_model_1.User.findById(userId).select('+password');
@@ -254,7 +260,7 @@ const updateAccount = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     message: 'Current password is required to set a new one.',
                 });
             }
-            const isMatch = yield bcrypt_1.default.compare(currPassword, newPassword);
+            const isMatch = yield bcrypt_1.default.compare(currPassword, user.password);
             if (!isMatch) {
                 return res.status(400).json({
                     message: 'Incorrect current password.',
@@ -303,10 +309,10 @@ const updateAccount = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
     }
     catch (err) {
-        (console.error('Update Error'),
-            res.status(500).json({
-                message: 'Server error during update.',
-            }));
+        console.error('Update Error', err);
+        res.status(500).json({
+            message: 'Server error during update.',
+        });
     }
 });
 /**
@@ -314,8 +320,8 @@ const updateAccount = (req, res) => __awaiter(void 0, void 0, void 0, function* 
  * @route DELETE /users/delete
  */
 const deleteAccount = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    var _a, _b;
+    const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a._id) || ((_b = req.user) === null || _b === void 0 ? void 0 : _b.id);
     const deleted = yield user_service_1.default.remove(userId);
     if (!deleted) {
         return res.status(400).json({
@@ -326,6 +332,40 @@ const deleteAccount = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         message: 'Account deleted successfully!',
     });
 });
+/**
+ * Upload Avatar to Cloudinary
+ * @route POST /users/upload-avatar
+ */
+const uploadAvatar = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        cloudinary_1.v2.config({
+            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+            api_key: process.env.CLOUDINARY_API_KEY,
+            api_secret: process.env.CLOUDINARY_API_SECRET,
+        });
+        if (!req.file) {
+            return res.status(400).json({
+                message: 'No image file provided.',
+            });
+        }
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+        const result = yield cloudinary_1.v2.uploader.upload(dataURI, {
+            folder: 'swappa_avatars',
+            transformation: [{ width: 500, height: 500, crop: 'fill', gravity: 'face' }],
+        });
+        res.status(200).json({
+            message: 'Image uploaded successfully',
+            secure_url: result.secure_url,
+        });
+    }
+    catch (err) {
+        console.error('Cloudinary backend error:', err);
+        res.status(500).json({
+            message: 'Failed to upload image securely.',
+        });
+    }
+});
 exports.default = {
     signup,
     login,
@@ -334,4 +374,5 @@ exports.default = {
     getMe,
     updateAccount,
     deleteAccount,
+    uploadAvatar,
 };

@@ -17,6 +17,9 @@ const protect = (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         try {
             token = req.headers.authorization.split(' ')[1];
+            if (token === 'null' || token === 'undefined') {
+                throw new Error('Malformed token string');
+            }
             const decoded = (0, auth_utils_1.verifyToken)(token);
             // Check if user still exists in DB
             const user = yield user_model_1.User.findById(decoded.id).select('-password');
@@ -27,16 +30,17 @@ const protect = (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
             }
             req.user = user;
             next();
+            return;
         }
         catch (err) {
             console.error('Auth middleware error:', err);
-            res.status(401).json({
+            return res.status(401).json({
                 message: 'Not authorized, token failed.',
             });
         }
     }
     if (!token) {
-        res.status(401).json({
+        return res.status(401).json({
             message: 'Not authorized, no token.',
         });
     }

@@ -52,8 +52,13 @@ const MessageSchema = new mongoose_1.Schema({
         trim: true,
         maxlength: 1000,
     },
+    is_read: {
+        type: Boolean,
+        default: false,
+    },
 }, {
     timestamps: true,
 });
 MessageSchema.index({ trade_id: 1, createdAt: 1 });
+MessageSchema.index({ trade_id: 1, sender_id: 1, is_read: 1 });
 exports.Message = mongoose_1.default.model('Message', MessageSchema);

@@ -1,16 +1,30 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useState } from 'react';
-import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuthStore } from '../store/auth.store';
+import { updateProfile, deleteAccount as apiDeleteAccount } from '../api/user';
+import zxcvbn from 'zxcvbn';
+import ConfirmModal from '../components/ConfirmModal';
+import AlertModal from '../components/AlertModal';
 
 const AccountEditScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
-  const [firstName, setFirstName] = useState('Morgan');
-  const [lastName, setLastName] = useState('Rivers');
-  const [email, setEmail] = useState('morgan.rivers@example.com');
+  const { user, setAuth, logout } = useAuthStore();
+
+  const [firstName, setFirstName] = useState(user?.firstname || '');
+  const [lastName, setLastName] = useState(user?.lastname || '');
+  const [email, setEmail] = useState(user?.email || '');
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -21,16 +35,194 @@ const AccountEditScreen = () => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSave = () => {
-    console.log('Deploying changes...');
-    navigation.geBack();
+  const [passwordScore, setPasswordScore] = useState(0);
+
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    isSuccess: boolean;
+    variant: 'default' | 'error' | 'success';
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    isSuccess: false,
+    variant: 'default',
+  });
+
+  useEffect(() => {
+    let score = 0;
+    if (newPassword) {
+      const evaluation = zxcvbn(newPassword);
+      score = evaluation.score;
+      setPasswordScore(score);
+    } else {
+      setPasswordScore(0);
+    }
+  }, [newPassword]);
+
+  const getBarWidth = () => {
+    if (!newPassword) return '0%';
+    if (passwordScore <= 1) return '25%';
+    if (passwordScore === 2) return '50%';
+    if (passwordScore === 3) return '75%';
+    return '100%';
   };
 
-  const handleDeleteAccount = () => {
-    console.log('Deleting account...');
-    setShowDeleteConfirm(false);
-    navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
+  const getBarColor = () => {
+    if (!newPassword) return 'transparent';
+    if (passwordScore <= 1) return '#ef4444'; // Red
+    if (passwordScore === 2) return '#f97316'; // Orange
+    if (passwordScore === 3) return '#eab308'; // Yellow
+    return '#22c55e'; // Green
+  };
+
+  const handleSave = async () => {
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+      setAlertConfig({
+        visible: true,
+        title: 'Validation_Error',
+        message: 'Name and email fields cannot be empty.',
+        isSuccess: false,
+        variant: 'error',
+      });
+      return;
+    }
+
+    const isAttemptingPasswordChange = currentPassword || newPassword || confirmPassword;
+
+    if (isAttemptingPasswordChange) {
+      if (!currentPassword) {
+        setAlertConfig({
+          visible: true,
+          title: 'Security_Error',
+          message: 'You must enter your current password to set a new one.',
+          isSuccess: false,
+          variant: 'error',
+        });
+        return;
+      }
+      if (!newPassword) {
+        setAlertConfig({
+          visible: true,
+          title: 'Validation_Error',
+          message: 'You must enter a new password.',
+          isSuccess: false,
+          variant: 'error',
+        });
+        return;
+      }
+      if (!confirmPassword) {
+        setAlertConfig({
+          visible: true,
+          title: 'Validation_Error',
+          message: 'You must confirm your new password.',
+          isSuccess: false,
+          variant: 'error',
+        });
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setAlertConfig({
+          visible: true,
+          title: 'Security_Error',
+          message: 'New passwords do not match.',
+          isSuccess: false,
+          variant: 'error',
+        });
+        return;
+      }
+      if (passwordScore < 3) {
+        setAlertConfig({
+          visible: true,
+          title: 'Weak_Signature',
+          message: 'Please enter a stronger new password to continue.',
+          isSuccess: false,
+          variant: 'error',
+        });
+        return;
+      }
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await updateProfile({
+        firstname: firstName,
+        lastname: lastName,
+        email: email,
+        currPassword: currentPassword || undefined,
+        newPassword: newPassword || undefined,
+      });
+
+      if (result && result.user) {
+        setAuth(result.user);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+
+        setAlertConfig({
+          visible: true,
+          title: 'Update_Successful',
+          message: 'Account updated successfully.',
+          isSuccess: true,
+          variant: 'success',
+        });
+      } else {
+        setAlertConfig({
+          visible: true,
+          title: 'Update_Failed',
+          message: 'Please check your inputs and try again.',
+          isSuccess: false,
+          variant: 'error',
+        });
+      }
+    } catch (err: any) {
+      console.error('Account update error:', err);
+      setAlertConfig({
+        visible: true,
+        title: 'System_Error',
+        message: err.message || 'An unexpected error occurred.',
+        isSuccess: false,
+        variant: 'error',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsLoading(true);
+    try {
+      const success = await apiDeleteAccount();
+
+      if (success) {
+        setShowDeleteConfirm(false);
+        logout();
+      } else {
+        setAlertConfig({
+          visible: true,
+          title: 'Error',
+          message: 'Failed to delete account. Please try again.',
+          isSuccess: false,
+          variant: 'error',
+        });
+      }
+    } catch (err) {
+      console.error('Delete account error:', err);
+      setAlertConfig({
+        visible: true,
+        title: 'System_Error',
+        message: 'An unexpected error occurred.',
+        isSuccess: false,
+        variant: 'error',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -78,6 +270,7 @@ const AccountEditScreen = () => {
               onChangeText={setFirstName}
               className="w-full rounded-sm border-2 border-solid border-border bg-background px-3 py-2 font-body text-foreground focus:border-primary"
               placeholderTextColor="#64748B"
+              editable={!isLoading}
             />
           </View>
 
@@ -91,6 +284,7 @@ const AccountEditScreen = () => {
               onChangeText={setLastName}
               className="w-full rounded-sm border-2 border-solid border-border bg-background px-3 py-2 font-body text-foreground focus:border-primary"
               placeholderTextColor="#64748B"
+              editable={!isLoading}
             />
           </View>
 
@@ -106,6 +300,7 @@ const AccountEditScreen = () => {
               autoCapitalize="none"
               className="w-full rounded-sm border-2 border-solid border-border bg-background px-3 py-2 font-body text-foreground focus:border-primary"
               placeholderTextColor="#64748B"
+              editable={!isLoading}
             />
           </View>
         </View>
@@ -128,7 +323,7 @@ const AccountEditScreen = () => {
 
             {/* Current Password */}
             <View className="mb-4">
-              <Text className="text-destructive mb-2 font-technical text-xs uppercase tracking-wider">
+              <Text className="text-destructive mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
                 Current_Password
               </Text>
               <View className="relative justify-center">
@@ -139,6 +334,7 @@ const AccountEditScreen = () => {
                   className="border-destructive w-full rounded-sm border-2 border-solid bg-background px-3 py-2 pr-10 font-body text-foreground focus:border-primary"
                   placeholder="Enter current password"
                   placeholderTextColor="#64748B"
+                  editable={!isLoading}
                 />
                 <TouchableOpacity
                   onPress={() => setShowCurrent(!showCurrent)}
@@ -151,7 +347,7 @@ const AccountEditScreen = () => {
 
             {/* New Password */}
             <View className="mb-4">
-              <Text className="text-destructive mb-2 font-technical text-xs uppercase tracking-wider">
+              <Text className="text-destructive mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
                 New_Password
               </Text>
               <View className="relative justify-center">
@@ -162,6 +358,7 @@ const AccountEditScreen = () => {
                   className="border-destructive w-full rounded-sm border-2 border-solid bg-background px-3 py-2 pr-10 font-body text-foreground focus:border-primary"
                   placeholder="Enter new password"
                   placeholderTextColor="#64748B"
+                  editable={!isLoading}
                 />
                 <TouchableOpacity
                   onPress={() => setShowNew(!showNew)}
@@ -170,11 +367,25 @@ const AccountEditScreen = () => {
                   <Ionicons name={showNew ? 'eye-off' : 'eye'} size={20} color="#64748B" />
                 </TouchableOpacity>
               </View>
+
+              {newPassword.length > 0 && (
+                <View className="mt-2">
+                  <View className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <View
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{ width: getBarWidth(), backgroundColor: getBarColor() }}
+                    />
+                  </View>
+                  <Text className="mt-1 text-right font-technical text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {passwordScore < 3 ? 'Weak_Signature' : 'Strong_Signature'}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Confirm Password */}
             <View className="mb-4">
-              <Text className="text-destructive mb-2 font-technical text-xs uppercase tracking-wider">
+              <Text className="text-destructive mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
                 Confirm_New_Password
               </Text>
               <View className="relative justify-center">
@@ -185,6 +396,7 @@ const AccountEditScreen = () => {
                   className="border-destructive w-full rounded-sm border-2 border-solid bg-background px-3 py-2 pr-10 font-body text-foreground focus:border-primary"
                   placeholder="Confirm current password"
                   placeholderTextColor="#64748B"
+                  editable={!isLoading}
                 />
                 <TouchableOpacity
                   onPress={() => setShowConfirm(!showConfirm)}
@@ -201,8 +413,8 @@ const AccountEditScreen = () => {
                 Security_Requirements
               </Text>
               <Text className="font-body text-xs leading-relaxed text-muted-foreground">
-                • Minimum 8 characters{'\n'}• At least one uppercase letter{'\n'}• At least one
-                number{'\n'}• At least one special character
+                Our system uses dynamic entropy checking. Use long phrases, unpredictable words, or
+                a mix of characters to achieve a strong security signature.
               </Text>
             </View>
           </View>
@@ -242,16 +454,22 @@ const AccountEditScreen = () => {
       >
         <TouchableOpacity
           onPress={handleSave}
-          className="flex-1 flex-row items-center justify-center gap-2 rounded-sm bg-primary py-3 active:opacity-80"
+          disabled={isLoading}
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-sm bg-primary py-3 ${isLoading ? 'opacity-50' : 'active:opacity-80'}`}
         >
-          <Ionicons name="save" size={20} color="#FFFFFF" />
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <Ionicons name="save" size={20} color="#FFFFFF" />
+          )}
           <Text className="font-technical text-sm uppercase tracking-wider text-primary-foreground">
-            Deploy_Changes
+            {isLoading ? 'Deploying...' : 'Deploy_Changes'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => navigation.goBack()}
+          disabled={isLoading}
           className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-border bg-transparent py-3 active:bg-muted"
         >
           <Ionicons name="close" size={20} color="#64748B" />
@@ -262,50 +480,29 @@ const AccountEditScreen = () => {
       </View>
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        transparent={true}
+      <ConfirmModal
         visible={showDeleteConfirm}
-        animationType="fade"
-        onRequestClose={() => setShowDeleteConfirm(false)}
-      >
-        <View className="flex-1 items-center justify-center bg-black/60 px-6">
-          <View className="w-full max-w-md rounded-sm border-2 border-red-600 bg-card p-6 shadow-lg">
-            <View className="mb-4 flex-row items-center gap-3">
-              <View className="h-12 w-12 items-center justify-center rounded-sm bg-red-100 dark:bg-red-950">
-                <Ionicons name="trash" size={24} color="#ef4444" />
-              </View>
-              <Text className="font-technical text-lg font-bold uppercase tracking-wider text-red-600 dark:text-red-500">
-                Delete_Account
-              </Text>
-            </View>
+        title="Delete_Account"
+        message="Are you absolutely sure? This action cannot be undone. This will permanently delete your account, remove all your skills, trades, and messages from our servers."
+        confirmText="Delete_Forever"
+        cancelText="Cancel"
+        isDestructive={true}
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
 
-            <Text className="mb-6 font-body text-sm leading-relaxed text-foreground">
-              Are you absolutely sure? This action cannot be undone. This will permanently delete
-              your account, remove all your skills, trades, and messages from our servers.
-            </Text>
-
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                onPress={handleDeleteAccount}
-                className="flex-1 rounded-sm bg-red-600 py-3 active:bg-red-700"
-              >
-                <Text className="text-center font-technical text-sm font-bold uppercase tracking-wider text-white">
-                  Delete_Forever
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setShowDeleteConfirm(false)}
-                className="flex-1 rounded-sm bg-muted py-3 active:opacity-70"
-              >
-                <Text className="text-center font-technical text-sm font-bold uppercase tracking-wider text-foreground">
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <AlertModal
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        variant={alertConfig.variant}
+        onClose={() => {
+          setAlertConfig((prev) => ({ ...prev, visible: false }));
+          if (alertConfig.isSuccess) {
+            navigation.goBack();
+          }
+        }}
+      />
     </View>
   );
 };

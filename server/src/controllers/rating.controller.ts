@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import ratingService from '../services/rating.service';
+import tradeService from '../services/trade.service';
+import notificationService from '../services/notification.service';
 
 /**
  * Leave a Rating
@@ -15,6 +17,27 @@ const createRating = async (req: Request, res: Response) => {
       score,
       comment,
     });
+
+    const trade = await tradeService.getById(trade_id);
+    if (trade) {
+      const initiatorId = trade.initiator_id._id?.toString() || trade.initiator_id.toString();
+      const receiverId = trade.receiver_id._id?.toString() || trade.receiver_id.toString();
+      const partnerId = initiatorId === reviewer_id.toString() ? receiverId : initiatorId;
+
+      await notificationService.createNotification({
+        recipient_id: partnerId as any,
+        type: 'NEW_EVALUATION',
+        title: 'EVALUATION_RECEIVED',
+        message: `Your swap partner submitted a ${score}-star post-trade report.`,
+        trade_id: trade_id as any,
+        partner_id: reviewer_id as any,
+      });
+
+      const io = req.app.get('io');
+      if (io) {
+        io.to(partnerId).emit('new_notification');
+      }
+    }
 
     res.status(201).json({
       message: 'Review submitted successfully!',
@@ -60,9 +83,32 @@ const updateRating = async (req: Request<{ id: string }>, res: Response) => {
       comment,
     });
 
+    if (updatedRating && updatedRating.trade_id) {
+      const trade = await tradeService.getById(updatedRating.trade_id.toString());
+      if (trade) {
+        const initiatorId = trade.initiator_id._id?.toString() || trade.initiator_id.toString();
+        const receiverId = trade.receiver_id._id?.toString() || trade.receiver_id.toString();
+        const partnerId = initiatorId === reviewer_id.toString() ? receiverId : initiatorId;
+
+        await notificationService.createNotification({
+          recipient_id: partnerId as any,
+          type: 'NEW_EVALUATION',
+          title: 'EVALUATION_UPDATED',
+          message: `Your partner revised their evaluation to ${score} stars.`,
+          trade_id: updatedRating.trade_id as any,
+          partner_id: reviewer_id as any,
+        });
+
+        const io = req.app.get('io');
+        if (io) {
+          io.to(partnerId).emit('new_notification');
+        }
+      }
+    }
+
     res.status(200).json({
       message: 'Review updated successfully!',
-      rating: updateRating,
+      rating: updatedRating,
     });
   } catch (err: any) {
     res.status(400).json({
@@ -93,12 +139,18 @@ const deleteRating = async (req: Request<{ id: string }>, res: Response) => {
  * Check if the logged-in user already reviewed a specific trade
  * @route GET /ratings/check/:tradeId
  */
-const checkMyReviewStatus = async (req: Request<{ trade_id: string }>, res: Response) => {
+const checkMyReviewStatus = async (req: Request<{ tradeId: string }>, res: Response) => {
   try {
     const reviewer_id = (req as any).user.id;
-    const { trade_id } = req.params;
+    const { tradeId } = req.params;
 
-    const existingReview = await ratingService.checkMyReview(trade_id, reviewer_id);
+    if (!tradeId) {
+      return res.status(400).json({
+        message: 'Trade ID is required.',
+      });
+    }
+
+    const existingReview = await ratingService.checkMyReview(tradeId, reviewer_id);
 
     if (existingReview) {
       res.status(200).json({

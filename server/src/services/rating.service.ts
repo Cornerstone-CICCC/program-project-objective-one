@@ -18,10 +18,14 @@ const recalculateUserAverage = async (userId: string) => {
 
   if (stats.length > 0) {
     const roundedAverage = Math.round(stats[0].averageRating * 10) / 10;
-    await User.findByIdAndUpdate(userId, { average_rating: roundedAverage });
+
+    await User.findByIdAndUpdate(userId, {
+      average_rating: roundedAverage,
+      total_reviews: stats[0].numberOfReviews,
+    });
   } else {
     // If they deleted their ONLY review, reset the average to 0
-    await User.findByIdAndUpdate(userId, { average_rating: 0 });
+    await User.findByIdAndUpdate(userId, { average_rating: 0, total_reviews: 0 });
   }
 };
 
@@ -81,6 +85,7 @@ const getReviewsForUser = async (reviewee_id: string) => {
       path: 'trade_id',
       populate: [
         { path: 'offered_skill_id', select: 'name category' },
+        { path: 'received_skill_id', select: 'name category' },
         { path: 'sought_skill_id', select: 'name category' },
       ],
     })
@@ -132,10 +137,24 @@ const checkMyReview = async (trade_id: string, reviewer_id: string) => {
   return await Rating.findOne({ trade_id, reviewer_id });
 };
 
+// Sync all users in the database (One-time)
+const syncAllUserRatings = async () => {
+  console.log('Starting Database Sync for Rating...');
+
+  const users = await User.find({});
+
+  for (const user of users) {
+    await recalculateUserAverage(user._id.toString());
+  }
+
+  console.log(`Successfully synced ${users.length} users!`);
+};
+
 export default {
   createRating,
   getReviewsForUser,
   updateRating,
   deleteRating,
   checkMyReview,
+  syncAllUserRatings,
 };

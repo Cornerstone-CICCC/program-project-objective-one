@@ -11,7 +11,15 @@ const getByUserId = async (userId: string) => {
 };
 
 // Update location
-const update = async (userId: string, lat: number, lng: number, address: string, city: string) => {
+const update = async (
+  userId: string,
+  lat: number,
+  lng: number,
+  city: string,
+  province: string,
+  country: string,
+  address?: string,
+) => {
   return await Location.findOneAndUpdate(
     { user_id: userId },
     {
@@ -21,8 +29,10 @@ const update = async (userId: string, lat: number, lng: number, address: string,
       },
       address,
       city,
+      province,
+      country,
     },
-    { new: true },
+    { new: true, runValidators: true },
   );
 };
 

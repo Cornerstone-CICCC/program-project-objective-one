@@ -34,19 +34,19 @@ const fetchUserSkills = (userId) => __awaiter(void 0, void 0, void 0, function* 
 const updateLocation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
-    const { lat, lng, address, city } = req.body;
+    const { lat, lng, address, city, province, country } = req.body;
     if (!userId) {
         return res.status(401).json({
             message: 'Not authorized',
         });
     }
-    if (lat === undefined || lng === undefined || !address || !city) {
+    if (lat === undefined || lng === undefined || !city || !province || !country) {
         return res.status(400).json({
-            message: 'Missing location fields (lat, lng, address, city',
+            message: 'Missing location fields (lat, lng, city, province, country)',
         });
     }
     try {
-        const updatedLocation = yield location_service_1.default.update(userId, lat, lng, address, city);
+        const updatedLocation = yield location_service_1.default.update(userId, lat, lng, city, province, country, address);
         if (!updatedLocation) {
             return res.status(404).json({
                 message: 'Location not found for this user',
@@ -95,6 +95,8 @@ const getNearby = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 lat: location.geo_location.coordinates[1],
                 lng: location.geo_location.coordinates[0],
                 city: location.city,
+                province: location.province,
+                country: location.country,
                 offering,
                 seeking,
             };

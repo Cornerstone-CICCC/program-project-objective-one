@@ -37,6 +37,7 @@ const setupSockets = (io) => {
     io.on('connection', (socket) => {
         const userId = socket.data.user.id;
         console.log(`User conneted to sockets: ${userId}`);
+        socket.join(userId.toString());
         // Join a chat room (Trade ID)
         socket.on('join_trade', (trade_id) => __awaiter(void 0, void 0, void 0, function* () {
             try {
@@ -71,6 +72,14 @@ const setupSockets = (io) => {
                 });
                 // Broadcast the fully populated message to everyone in the room (including the sender)
                 io.to(data.trade_id).emit('receive_message', savedMessage);
+                const trade = yield trade_model_1.Trade.findById(data.trade_id);
+                if (trade) {
+                    const initiatorId = trade.initiator_id.toString();
+                    const receiverId = trade.receiver_id.toString();
+                    const partnerId = initiatorId === userId ? receiverId : initiatorId;
+                    io.to(partnerId).emit('new_message');
+                    io.to(partnerId).emit('new_notification');
+                }
             }
             catch (err) {
                 socket.emit('error', {
@@ -85,6 +94,13 @@ const setupSockets = (io) => {
                 const updatedMessage = yield message_service_1.default.updateMessage(data.message_id, userId, data.content);
                 // Tell everyone in the room that a message changed, and send the new version
                 io.to(data.trade_id).emit('message_updated', updatedMessage);
+                const trade = yield trade_model_1.Trade.findById(data.trade_id);
+                if (trade) {
+                    const partnerId = trade.initiator_id.toString() === userId
+                        ? trade.receiver_id.toString()
+                        : trade.initiator_id.toString();
+                    io.to(partnerId).emit('new_message');
+                }
             }
             catch (err) {
                 socket.emit('error', {
@@ -101,6 +117,13 @@ const setupSockets = (io) => {
                 io.to(data.trade_id).emit('message_deleted', {
                     message_id: data.message_id,
                 });
+                const trade = yield trade_model_1.Trade.findById(data.trade_id);
+                if (trade) {
+                    const partnerId = trade.initiator_id.toString() === userId
+                        ? trade.receiver_id.toString()
+                        : trade.initiator_id.toString();
+                    io.to(partnerId).emit('new_message');
+                }
             }
             catch (err) {
                 socket.emit('error', {

@@ -25,7 +25,7 @@ const fetchUserSkills = async (userId: string | any) => {
  */
 const updateLocation = async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
-  const { lat, lng, address, city } = req.body;
+  const { lat, lng, address, city, province, country } = req.body;
 
   if (!userId) {
     return res.status(401).json({
@@ -33,14 +33,22 @@ const updateLocation = async (req: Request, res: Response) => {
     });
   }
 
-  if (lat === undefined || lng === undefined || !address || !city) {
+  if (lat === undefined || lng === undefined || !city || !province || !country) {
     return res.status(400).json({
-      message: 'Missing location fields (lat, lng, address, city',
+      message: 'Missing location fields (lat, lng, city, province, country)',
     });
   }
 
   try {
-    const updatedLocation = await locationService.update(userId, lat, lng, address, city);
+    const updatedLocation = await locationService.update(
+      userId,
+      lat,
+      lng,
+      city,
+      province,
+      country,
+      address,
+    );
 
     if (!updatedLocation) {
       return res.status(404).json({
@@ -102,6 +110,8 @@ const getNearby = async (req: Request, res: Response) => {
           lat: location.geo_location.coordinates[1],
           lng: location.geo_location.coordinates[0],
           city: location.city,
+          province: location.province,
+          country: location.country,
           offering,
           seeking,
         };

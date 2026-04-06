@@ -15,6 +15,8 @@ import userSkillRouter from './routes/userSkill.routes';
 import tradeRouter from './routes/trade.routes';
 import ratingRouter from './routes/rating.routes';
 import messageRouter from './routes/message.routes';
+import notificationRouter from './routes/notification.routes';
+import ratingService from './services/rating.service';
 
 dotenv.config();
 
@@ -42,6 +44,8 @@ const io = new Server(server, {
 // Connect the socket logic
 setupSockets(io);
 
+app.set('io', io);
+
 // Middleware
 app.use(
   cors({
@@ -60,6 +64,7 @@ app.use('/user-skills', userSkillRouter);
 app.use('/trades', tradeRouter);
 app.use('/ratings', ratingRouter);
 app.use('/messages', messageRouter);
+app.use('/notifications', notificationRouter);
 
 app.get('/', (req: Request, res: Response) => {
   res.status(200).send('Server is running!');
@@ -71,8 +76,10 @@ const PORT = process.env.PORT || 5000;
 
 mongoose
   .connect(MONGO_URI, { dbName: 'swappa' })
-  .then(() => {
+  .then(async () => {
     console.log('Connected to MongoDB database');
+
+    await ratingService.syncAllUserRatings();
 
     server.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
