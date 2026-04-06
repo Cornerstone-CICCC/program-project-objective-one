@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,14 +12,47 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Defs, Line, Path, Pattern, Rect } from 'react-native-svg';
+import * as Location from 'expo-location';
+import { useNavigation } from '@react-navigation/native';
+import { login, signup } from '../api/auth';
+import zxcvbn from 'zxcvbn';
+import { useAuthStore } from '../store/auth.store';
+import AlertModal from '../components/AlertModal';
+import { Country, State, City } from 'country-state-city';
+import SelectModal from '../components/SelectModal';
 
 const AuthScreen = () => {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+  const navigation = useNavigation<any>();
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [showCountryModal, setShowCountryModal] = useState(false);
+  const [showProvinceModal, setShowProvinceModal] = useState(false);
+  const [showCityModal, setShowCityModal] = useState(false);
+
+  const [pendingAuthUser, setPendingAuthUser] = useState<any>(null);
+
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    isSuccess: boolean;
+    variant: 'default' | 'error' | 'success';
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    isSuccess: false,
+    variant: 'default',
+  });
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -26,7 +60,39 @@ const AuthScreen = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    lat: null as number | null,
+    lng: null as number | null,
+    city: '',
+    province: '',
+    provinceCode: '',
+    country: '',
+    countryCode: '',
   });
+
+  const countryOptions = useMemo(() => {
+    return Country.getAllCountries().map((c) => ({
+      label: c.name,
+      value: c.isoCode,
+    }));
+  }, []);
+
+  const provinceOptions = useMemo(() => {
+    if (!formData.countryCode) return [];
+    return State.getStatesOfCountry(formData.countryCode).map((s) => ({
+      label: s.name,
+      value: s.isoCode,
+    }));
+  }, [formData.countryCode]);
+
+  const cityOptions = useMemo(() => {
+    if (!formData.countryCode || !formData.provinceCode) return [];
+    return City.getCitiesOfState(formData.countryCode, formData.provinceCode).map((c) => ({
+      label: c.name,
+      value: c.name,
+      lat: c.latitude,
+      lng: c.longitude,
+    }));
+  }, [formData.countryCode, formData.provinceCode]);
 
   const handleModeSwitch = (newMode: 'login' | 'signup') => {
     if (mode === newMode) return;
@@ -41,8 +107,220 @@ const AuthScreen = () => {
     }));
   };
 
-  const handleSubmit = () => {
-    console.log('Auth submit:', mode);
+  const handleAutoLocate = async () => {
+    setIsLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setAlertConfig({
+          visible: true,
+          title: 'Permission_Denied',
+          message: 'Please allow location access, or type your city manually.',
+          isSuccess: false,
+          variant: 'error',
+        });
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+
+      const geo = await Location.reverseGeocodeAsync({ latitude, longitude });
+      if (geo.length > 0) {
+        const place = geo[0];
+
+        const cityStr = place.city || place.subregion || '';
+        const isoCountry = place.isoCountryCode || '';
+        const countryName = place.country || '';
+
+        const statesForCountry = State.getStatesOfCountry(isoCountry);
+        const matchedState = statesForCountry.find(
+          (s) => s.name === place.region || s.isoCode === place.region,
+        );
+
+        const provinceName = matchedState ? matchedState.name : place.region || '';
+        const isoProvince = matchedState ? matchedState.isoCode : '';
+        const addressStr = place.name || place.street || cityStr;
+
+        setFormData((prev) => ({
+          ...prev,
+          lat: latitude,
+          lng: longitude,
+          city: cityStr,
+          country: countryName,
+          countryCode: isoCountry,
+          province: provinceName,
+          provinceCode: isoProvince,
+          address: addressStr,
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+      setAlertConfig({
+        visible: true,
+        title: 'Location_Error',
+        message: 'Could not detect location. Please type it manually.',
+        isSuccess: false,
+        variant: 'error',
+      });
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+
+    try {
+      if (mode === 'signup') {
+        const strength = zxcvbn(formData.password);
+        if (strength.score < 3) {
+          setAlertConfig({
+            visible: true,
+            title: 'Weak_Signature',
+            message: 'Please create a stronger password before continuing.',
+            isSuccess: false,
+            variant: 'error',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          setAlertConfig({
+            visible: true,
+            title: 'Security_Mismatch',
+            message: 'Your passwords do not match.',
+            isSuccess: false,
+            variant: 'error',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        let finalLat = formData.lat;
+        let finalLng = formData.lng;
+
+        if (!formData.city.trim() || !formData.province.trim() || !formData.country.trim()) {
+          setAlertConfig({
+            visible: true,
+            title: 'Data_Missing',
+            message: 'Please auto-locate or manually select your Country, Province, and City.',
+            isSuccess: false,
+            variant: 'error',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!finalLat || !finalLng) {
+          try {
+            const searchString = `${formData.city}, ${formData.province}, ${formData.country}`;
+            const geocoded = await Location.geocodeAsync(searchString);
+
+            if (geocoded.length > 0) {
+              finalLat = geocoded[0].latitude;
+              finalLng = geocoded[0].longitude;
+            } else {
+              throw new Error('No coordinates found');
+            }
+          } catch (err) {
+            console.log('Emulator geocoding failed! Using Developer Fallback coordinates.');
+
+            finalLat = 49.2827;
+            finalLng = -123.1207;
+          }
+        }
+
+        const signupPayload = {
+          firstname: formData.firstName.trim(),
+          lastname: formData.lastName.trim(),
+          username: formData.username.trim(),
+          email: formData.email.trim().toLowerCase(),
+          password: formData.password,
+          lat: finalLat,
+          lng: finalLng,
+          city: formData.city.trim(),
+          province: formData.provinceCode || formData.province.trim(),
+          country: formData.countryCode || formData.country.trim(),
+        };
+
+        const result = await signup(signupPayload);
+
+        if (result) {
+          setPendingAuthUser({ user: result.user, token: result.token });
+          setAlertConfig({
+            visible: true,
+            title: 'Access_Granted',
+            message: `Welcome to Swappa, ${result.user.firstname}!`,
+            isSuccess: true,
+            variant: 'success',
+          });
+        } else {
+          setAlertConfig({
+            visible: true,
+            title: 'Authentication_Failed',
+            message: 'Please check your information and try again.',
+            isSuccess: false,
+            variant: 'error',
+          });
+        }
+      } else {
+        // Handle Login
+        const cleanEmail = formData.email.trim().toLowerCase();
+
+        const result = await login({ email: cleanEmail, password: formData.password });
+
+        if (result) {
+          setPendingAuthUser({ user: result.user, token: result.token });
+          setAlertConfig({
+            visible: true,
+            title: 'Access_Granted',
+            message: `Welcome back, ${result.user.firstname}!`,
+            isSuccess: true,
+            variant: 'success',
+          });
+        } else {
+          setAlertConfig({
+            visible: true,
+            title: 'Access_Denied',
+            message: 'Incorrect email or password.',
+            isSuccess: false,
+            variant: 'error',
+          });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setAlertConfig({
+        visible: true,
+        title: 'Network_Error',
+        message: 'Something went wrong connecting to the server.',
+        isSuccess: false,
+        variant: 'error',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const passwordStrength = formData.password ? zxcvbn(formData.password) : { score: 0 };
+  const getMeterColor = (level: number) => {
+    if (!formData.password) return 'bg-[#E2E8F0]';
+    if (passwordStrength.score < level) return 'bg-[#E2E8F0]';
+
+    if (passwordStrength.score === 0) return 'bg-red-500';
+    if (passwordStrength.score === 1) return 'bg-orange-500';
+    if (passwordStrength.score === 2) return 'bg-yellow-500';
+    if (passwordStrength.score === 3) return 'bg-lime-500';
+    return 'bg-green-500';
+  };
+
+  const getMeterText = () => {
+    if (!formData.password) return 'Enter a password';
+    if (passwordStrength.score < 3) return 'Too Weak (Keep going!)';
+    if (passwordStrength.score === 3) return 'Strong (Good to go)';
+    return 'Very Strong (Excellent)';
   };
 
   return (
@@ -126,7 +404,7 @@ const AuthScreen = () => {
               <Circle cx="60" cy="20" r="2" fill="white" opacity="0.7" />
             </Svg>
 
-            <Text className="font-bungee mb-4 text-5xl font-bold uppercase tracking-wider text-white">
+            <Text className="mb-4 font-bungee text-5xl font-bold uppercase tracking-wider text-white">
               Swappa
             </Text>
             <View className="space-y-2 opacity-90">
@@ -237,10 +515,11 @@ const AuthScreen = () => {
                       <TextInput
                         value={formData.firstName}
                         onChangeText={(text) => setFormData({ ...formData, firstName: text })}
-                        className="font-body h-12 w-full rounded border border-[#0F172A] bg-white px-4 text-[#0F172A]"
+                        className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                         placeholder="Enter your first name"
                       />
                     </View>
+
                     <View className="flex-1">
                       <Text className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-[#64748B]">
                         User_Last_Name
@@ -248,7 +527,7 @@ const AuthScreen = () => {
                       <TextInput
                         value={formData.lastName}
                         onChangeText={(text) => setFormData({ ...formData, lastName: text })}
-                        className="font-body w-full rounded border border-[#0F172A] bg-white px-4 py-3 text-[#0F172A]"
+                        className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                         placeholder="Enter your last name"
                       />
                     </View>
@@ -262,9 +541,80 @@ const AuthScreen = () => {
                       value={formData.username}
                       onChangeText={(text) => setFormData({ ...formData, username: text })}
                       autoCapitalize="none"
-                      className="font-body w-full rounded border border-[#0F172A] bg-white px-4 py-3 text-[#0F172A]"
+                      className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                       placeholder="Enter your display name"
                     />
+                  </View>
+
+                  <View className="mb-2 mt-4 border-t border-[#E2E8F0] pt-4">
+                    <View className="mb-4 flex-row items-center justify-between">
+                      <Text className="font-mono text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                        Location_Data
+                      </Text>
+                      <TouchableOpacity
+                        onPress={handleAutoLocate}
+                        disabled={isLocating}
+                        className="flex-row items-center gap-2 rounded bg-[#F1F5F9] px-3 py-1.5 active:bg-[#E2E8F0]"
+                      >
+                        {isLocating ? (
+                          <ActivityIndicator size="small" color="#1E40AF" />
+                        ) : (
+                          <>
+                            <Ionicons name="navigate-outline" size={14} color="#1E40AF" />
+                            <Text className="font-mono text-[10px] font-bold uppercase text-[#1E40AF]">
+                              Auto-Locate
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+
+                    <View className="flex-col gap-3">
+                      {/* Country Dropdown */}
+                      <TouchableOpacity
+                        onPress={() => setShowCountryModal(true)}
+                        className="h-12 w-full flex-row items-center justify-between rounded border border-[#0F172A] bg-white px-4"
+                      >
+                        <Text
+                          className={`font-body ${formData.country ? 'text-[#0F172A]' : 'text-[#94A3B8]'}`}
+                        >
+                          {formData.country || 'Select Country'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={16} color="#64748B" />
+                      </TouchableOpacity>
+
+                      <View className="flex-row gap-3">
+                        {/* Province Dropdown */}
+                        <TouchableOpacity
+                          onPress={() => setShowProvinceModal(true)}
+                          disabled={!formData.countryCode}
+                          className={`h-12 flex-1 flex-row items-center justify-between rounded border border-[#0F172A] px-4 ${!formData.countryCode ? 'bg-[#F1F5F9] opacity-50' : 'bg-white'}`}
+                        >
+                          <Text
+                            className={`font-body ${formData.province ? 'text-[#0F172A]' : 'text-[#94A3B8]'} flex-1`}
+                            numberOfLines={1}
+                          >
+                            {formData.province || 'Select Province'}
+                          </Text>
+                          <Ionicons name="chevron-down" size={16} color="#64748B" />
+                        </TouchableOpacity>
+
+                        {/* City Dropdown */}
+                        <TouchableOpacity
+                          onPress={() => setShowCityModal(true)}
+                          disabled={!formData.provinceCode}
+                          className={`h-12 flex-1 flex-row items-center justify-between rounded border border-[#0F172A] px-4 ${!formData.provinceCode ? 'bg-[#F1F5F9] opacity-50' : 'bg-white'}`}
+                        >
+                          <Text
+                            className={`font-body ${formData.city ? 'text-[#0F172A]' : 'text-[#94A3B8]'} flex-1`}
+                            numberOfLines={1}
+                          >
+                            {formData.city || 'Select City'}
+                          </Text>
+                          <Ionicons name="chevron-down" size={16} color="#64748B" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   </View>
                 </>
               )}
@@ -279,7 +629,9 @@ const AuthScreen = () => {
                   onChangeText={(text) => setFormData({ ...formData, email: text })}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  className="font-body w-full rounded border border-[#0F172A] bg-white px-4 py-3 text-[#0F172A]"
+                  autoCorrect={false}
+                  autoComplete="off"
+                  className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                   placeholder="user@example.com"
                 />
               </View>
@@ -293,7 +645,9 @@ const AuthScreen = () => {
                     value={formData.password}
                     onChangeText={(text) => setFormData({ ...formData, password: text })}
                     secureTextEntry={!showPassword}
-                    className="font-body w-full rounded border border-[#0F172A] bg-white px-4 py-3 text-[#0F172A]"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                     placeholder="Enter your password"
                   />
                   <TouchableOpacity
@@ -303,6 +657,24 @@ const AuthScreen = () => {
                     <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#64748B" />
                   </TouchableOpacity>
                 </View>
+
+                {mode === 'signup' && (
+                  <View className="mt-2">
+                    <View className="flex-row gap-1">
+                      {[0, 1, 2, 3, 4].map((level) => (
+                        <View
+                          key={level}
+                          className={`h-1.5 flex-1 rounded-sm ${getMeterColor(level)}`}
+                        />
+                      ))}
+                    </View>
+                    <Text
+                      className={`mt-1 text-right font-mono text-[10px] uppercase tracking-wider ${!formData.password ? 'text-[#64748B]' : passwordStrength.score < 3 ? 'text-red-500' : 'text-green-600'}`}
+                    >
+                      {getMeterText()}
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* Conditional Confirm Password */}
@@ -316,7 +688,9 @@ const AuthScreen = () => {
                       value={formData.confirmPassword}
                       onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
                       secureTextEntry={!showConfirmPassword}
-                      className="font-body w-full rounded border border-[#0F172A] bg-white px-4 py-3 text-[#0F172A]"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
                       placeholder="Confirm your password"
                     />
                     <TouchableOpacity
@@ -336,10 +710,18 @@ const AuthScreen = () => {
               {/* Submit Button */}
               <TouchableOpacity
                 onPress={handleSubmit}
-                className="mt-2 w-full items-center rounded bg-[#1E40AF] py-4"
+                disabled={isSubmitting}
+                className={`mt-2 w-full flex-row items-center justify-center rounded py-4 ${isSubmitting ? 'bg-[#1E40AF]/80' : 'bg-[#1E40AF]'}`}
               >
+                {isSubmitting && (
+                  <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                )}
                 <Text className="font-mono text-sm font-bold uppercase tracking-wider text-white">
-                  {mode === 'login' ? 'Authenticate_Session' : 'Initiate_Blueprint'}
+                  {isSubmitting
+                    ? 'Processing...'
+                    : mode === 'login'
+                      ? 'Authenticate_Session'
+                      : 'Initiate_Blueprint'}
                 </Text>
               </TouchableOpacity>
 
@@ -357,11 +739,78 @@ const AuthScreen = () => {
             <View className="absolute bottom-2 right-2 h-4 w-4 border-b-2 border-r-2 border-[#EAB308]" />
           </View>
 
-          <Text className="font-body mt-6 text-center text-xs text-[#64748B]">
+          <Text className="mt-6 text-center font-body text-xs text-[#64748B]">
             By continuing, you agree to Swappa's Terms of Service and Privacy Policy
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <AlertModal
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        variant={alertConfig.variant}
+        onClose={() => {
+          setAlertConfig((prev) => ({ ...prev, visible: false }));
+          if (alertConfig.isSuccess && pendingAuthUser) {
+            setAuth(pendingAuthUser.user, pendingAuthUser.token);
+          }
+        }}
+      />
+
+      <SelectModal
+        visible={showCountryModal}
+        title="Select Country"
+        options={countryOptions}
+        onClose={() => setShowCountryModal(false)}
+        onSelect={(option) => {
+          setFormData((prev) => ({
+            ...prev,
+            country: option.label,
+            countryCode: option.value,
+            province: '',
+            provinceCode: '',
+            city: '',
+            lat: null,
+            lng: null,
+          }));
+          setShowCountryModal(false);
+        }}
+      />
+
+      <SelectModal
+        visible={showProvinceModal}
+        title="Select Province/State"
+        options={provinceOptions}
+        onClose={() => setShowProvinceModal(false)}
+        onSelect={(option) => {
+          setFormData((prev) => ({
+            ...prev,
+            province: option.label,
+            provinceCode: option.value,
+            city: '',
+            lat: null,
+            lng: null,
+          }));
+          setShowProvinceModal(false);
+        }}
+      />
+
+      <SelectModal
+        visible={showCityModal}
+        title="Select City"
+        options={cityOptions}
+        onClose={() => setShowCityModal(false)}
+        onSelect={(option: any) => {
+          setFormData((prev) => ({
+            ...prev,
+            city: option.label,
+            lat: parseFloat(option.lat),
+            lng: parseFloat(option.lng),
+          }));
+          setShowCityModal(false);
+        }}
+      />
     </View>
   );
 };

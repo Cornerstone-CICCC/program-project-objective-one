@@ -34,7 +34,8 @@
             "image": "./assets/swappa-foreground.png"
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

@@ -8,6 +8,8 @@ const message_controller_1 = __importDefault(require("../controllers/message.con
 const auth_middleware_1 = require("../middleware/auth.middleware");
 const messageRouter = (0, express_1.Router)();
 messageRouter.use(auth_middleware_1.protect);
+messageRouter.get('/conversations', message_controller_1.default.getConversations);
+messageRouter.put('/:tradeId/read', message_controller_1.default.markAsRead);
 messageRouter.post('/', message_controller_1.default.sendMessage);
 messageRouter.get('/:tradeId', message_controller_1.default.getTradeMessages);
 messageRouter.put('/:id', message_controller_1.default.editMessage);

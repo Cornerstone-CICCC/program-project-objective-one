@@ -27,6 +27,8 @@ export const setupSockets = (io: Server) => {
     const userId = socket.data.user.id;
     console.log(`User conneted to sockets: ${userId}`);
 
+    socket.join(userId.toString());
+
     // Join a chat room (Trade ID)
     socket.on('join_trade', async (trade_id: string) => {
       try {
@@ -64,6 +66,17 @@ export const setupSockets = (io: Server) => {
 
         // Broadcast the fully populated message to everyone in the room (including the sender)
         io.to(data.trade_id).emit('receive_message', savedMessage);
+
+        const trade = await Trade.findById(data.trade_id);
+
+        if (trade) {
+          const initiatorId = trade.initiator_id.toString();
+          const receiverId = trade.receiver_id.toString();
+          const partnerId = initiatorId === userId ? receiverId : initiatorId;
+
+          io.to(partnerId).emit('new_message');
+          io.to(partnerId).emit('new_notification');
+        }
       } catch (err: any) {
         socket.emit('error', {
           message: err.message,
@@ -85,6 +98,16 @@ export const setupSockets = (io: Server) => {
 
           // Tell everyone in the room that a message changed, and send the new version
           io.to(data.trade_id).emit('message_updated', updatedMessage);
+
+          const trade = await Trade.findById(data.trade_id);
+
+          if (trade) {
+            const partnerId =
+              trade.initiator_id.toString() === userId
+                ? trade.receiver_id.toString()
+                : trade.initiator_id.toString();
+            io.to(partnerId).emit('new_message');
+          }
         } catch (err: any) {
           socket.emit('error', {
             message: err.message,
@@ -103,6 +126,16 @@ export const setupSockets = (io: Server) => {
         io.to(data.trade_id).emit('message_deleted', {
           message_id: data.message_id,
         });
+
+        const trade = await Trade.findById(data.trade_id);
+
+        if (trade) {
+          const partnerId =
+            trade.initiator_id.toString() === userId
+              ? trade.receiver_id.toString()
+              : trade.initiator_id.toString();
+          io.to(partnerId).emit('new_message');
+        }
       } catch (err: any) {
         socket.emit('error', {
           message: err.message,

@@ -4,6 +4,8 @@ import { protect } from '../middleware/auth.middleware';
 
 const userSkillRouter = Router();
 
+userSkillRouter.post('/bulk', protect, userSkillController.addBulkUserSkills);
+
 userSkillRouter.post('/', protect, userSkillController.addUserSkill);
 userSkillRouter.get('/me', protect, userSkillController.getMySkills);
 userSkillRouter.put('/:id', protect, userSkillController.updateUserSkill);

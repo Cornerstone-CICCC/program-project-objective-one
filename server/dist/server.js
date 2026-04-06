@@ -1,10 +1,22 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 // Server code
 const express_1 = __importDefault(require("express"));
+const http_1 = require("http");
+const socket_io_1 = require("socket.io");
+const chat_socket_1 = require("./sockets/chat.socket");
 const cors_1 = __importDefault(require("cors"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -16,9 +28,12 @@ const userSkill_routes_1 = __importDefault(require("./routes/userSkill.routes"))
 const trade_routes_1 = __importDefault(require("./routes/trade.routes"));
 const rating_routes_1 = __importDefault(require("./routes/rating.routes"));
 const message_routes_1 = __importDefault(require("./routes/message.routes"));
+const notification_routes_1 = __importDefault(require("./routes/notification.routes"));
+const rating_service_1 = __importDefault(require("./services/rating.service"));
 dotenv_1.default.config();
 // Create server
 const app = (0, express_1.default)();
+const server = (0, http_1.createServer)(app);
 // Define allowed origins
 const allowedOrigins = [
     process.env.FRONTEND_URL,
@@ -26,6 +41,17 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 ].filter((origin) => !!origin);
+// Initialize Socket.io
+const io = new socket_io_1.Server(server, {
+    cors: {
+        origin: allowedOrigins,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    },
+});
+// Connect the socket logic
+(0, chat_socket_1.setupSockets)(io);
+app.set('io', io);
 // Middleware
 app.use((0, cors_1.default)({
     origin: allowedOrigins,
@@ -40,6 +66,7 @@ app.use('/user-skills', userSkill_routes_1.default);
 app.use('/trades', trade_routes_1.default);
 app.use('/ratings', rating_routes_1.default);
 app.use('/messages', message_routes_1.default);
+app.use('/notifications', notification_routes_1.default);
 app.get('/', (req, res) => {
     res.status(200).send('Server is running!');
 });
@@ -48,12 +75,13 @@ const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 5000;
 mongoose_1.default
     .connect(MONGO_URI, { dbName: 'swappa' })
-    .then(() => {
+    .then(() => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Connected to MongoDB database');
-    app.listen(PORT, () => {
+    yield rating_service_1.default.syncAllUserRatings();
+    server.listen(PORT, () => {
         console.log(`Server is running on http://localhost:${PORT}`);
     });
-})
+}))
     .catch((err) => {
     console.error('Error connecting to MongoDB:', err);
     process.exit(1);

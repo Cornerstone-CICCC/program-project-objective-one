@@ -51,11 +51,32 @@ const TradeSchema = new mongoose_1.Schema({
         ref: 'Skill',
         required: true,
     },
-    sought_skill_id: {
+    received_skill_id: {
         type: mongoose_1.default.Schema.Types.ObjectId,
         ref: 'Skill',
         required: true,
     },
+    message: {
+        type: String,
+        trim: true,
+        maxlength: 500,
+    },
+    proposed_location: {
+        type: String,
+        trim: true,
+        maxlength: 100,
+    },
+    cancellation_reason: {
+        type: String,
+        trim: true,
+        maxlength: 500,
+    },
+    hidden_by: [
+        {
+            type: mongoose_1.default.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+    ],
     status: {
         type: String,
         enum: ['PENDING', 'ACCEPTED', 'REJECTED', 'COMPLETED', 'CANCELLED'],

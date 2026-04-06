@@ -8,7 +8,9 @@ tradeRouter.use(protect);
 
 tradeRouter.post('/', tradeController.createTrade);
 tradeRouter.get('/me', tradeController.getMyTrades);
+tradeRouter.get('/user/:userId', tradeController.getUserTrades);
 tradeRouter.get('/:id', tradeController.getTradeById);
 tradeRouter.put('/:id/status', tradeController.updateTradeStatus);
+tradeRouter.put('/:id/hide', tradeController.hideTrade);
 
 export default tradeRouter;

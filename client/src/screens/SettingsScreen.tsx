@@ -4,7 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeStore } from '../store/theme.store';
 import { Ionicons } from '@expo/vector-icons';
-import { currentUser } from '../data/mockData';
+import { useAuthStore } from '../store/auth.store';
+import { logout as apiLogout } from '../api/auth';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -14,12 +15,19 @@ const SettingsScreen = () => {
 
   const { themeMode, setThemeMode } = useThemeStore();
 
+  const { user, logout: clearStoreUser } = useAuthStore();
+
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log('Logging out...');
-    navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
+
+    await apiLogout();
+    clearStoreUser();
   };
+
+  const fullName = user ? `${user.firstname} ${user.lastname}` : 'User';
+  const offeringCount = user?.offering?.length || 0;
 
   return (
     <View className="flex-1 bg-background">
@@ -51,30 +59,21 @@ const SettingsScreen = () => {
             {/* Image Wrapper */}
             <View className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-sm border-2 border-solid border-muted-foreground bg-muted">
               <Image
-                source={{ uri: currentUser.avatar }}
-                style={{ width: 64, height: 64 }}
-                resizeMode="cover"
+                source={{ uri: user?.avatar_url || 'https://placehold.co/150' }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="contain"
               />
             </View>
 
-            <View className="flex-1">
-              <Text className="mb-1 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-                Profile_Data
+            <View className="flex-1 justify-center">
+              <Text className="mb-1 font-technical text-[10px] tracking-wider text-muted-foreground">
+                @{user?.username || 'user'}
               </Text>
-              <Text className="font-body font-medium text-foreground">{currentUser.name}</Text>
-              <Text className="font-body text-sm text-muted-foreground">
-                {currentUser.offering.length} skills offered
+              <Text className="font-lg font-body text-foreground">{fullName}</Text>
+              <Text className="font-body text-xs text-muted-foreground">
+                {offeringCount} skills offered
               </Text>
             </View>
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate('ProfileEdit')}
-              className="rounded-sm bg-primary px-4 py-2 active:opacity-80"
-            >
-              <Text className="font-technical text-sm uppercase tracking-wider text-primary-foreground">
-                Edit
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
 

@@ -55,8 +55,10 @@ const LocationSchema = new mongoose_1.Schema({
             },
         },
     },
-    address: { type: String, required: true, trim: true },
+    address: { type: String, required: false, trim: true },
     city: { type: String, required: true, trim: true },
+    province: { type: String, required: true, trim: true },
+    country: { type: String, required: true, trim: true },
 }, {
     timestamps: true,
 });

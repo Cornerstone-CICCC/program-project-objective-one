@@ -40,6 +40,59 @@ const addUserSkill = async (req: Request, res: Response) => {
 };
 
 /**
+ * Bulk add Skills to Profile
+ * @route POST /user-skills/bulk
+ */
+const addBulkUserSkills = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const { skills } = req.body;
+
+    if (!skills || !Array.isArray(skills) || skills.length === 0) {
+      return res.status(400).json({
+        message: 'A valid array of skills is required.',
+      });
+    }
+
+    const addedSkills = [];
+    const failedSkills = [];
+
+    for (const skill of skills) {
+      try {
+        if (!skill.skill_id || !skill.type) {
+          throw new Error('Missing skill_id or type.');
+        }
+
+        const newSkill = await userSkillService.add(userId, {
+          skill_id: skill.skill_id,
+          type: skill.type,
+          proficiency: skill.proficiency || 'Beginner',
+          description: skill.description,
+        });
+
+        addedSkills.push(newSkill);
+      } catch (err: any) {
+        failedSkills.push({
+          skill_id: skill.skill_id,
+          reason: err.message || 'Unknown error.',
+        });
+      }
+    }
+
+    res.status(201).json({
+      message: `Successfully added ${addedSkills.length} skills.`,
+      added: addedSkills,
+      errors: failedSkills.length > 0 ? failedSkills : undefined,
+    });
+  } catch (err) {
+    console.error('Bulk add skills error:', err);
+    res.status(500).json({
+      message: 'Server error processing bulk skills request.',
+    });
+  }
+};
+
+/**
  * Get My Skills
  * @route GET /user-skills/me
  */
@@ -112,6 +165,7 @@ const deleteUserSkill = async (req: Request<{ id: string }>, res: Response) => {
 
 export default {
   addUserSkill,
+  addBulkUserSkills,
   getMySkills,
   getUserSkills,
   updateUserSkill,

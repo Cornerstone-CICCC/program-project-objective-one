@@ -4,7 +4,9 @@ export interface IMessage extends Document {
   trade_id: mongoose.Types.ObjectId;
   sender_id: mongoose.Types.ObjectId;
   content: string;
-  created_at: Date;
+  is_read: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const MessageSchema: Schema = new Schema(
@@ -25,6 +27,10 @@ const MessageSchema: Schema = new Schema(
       trim: true,
       maxlength: 1000,
     },
+    is_read: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -32,5 +38,7 @@ const MessageSchema: Schema = new Schema(
 );
 
 MessageSchema.index({ trade_id: 1, createdAt: 1 });
+
+MessageSchema.index({ trade_id: 1, sender_id: 1, is_read: 1 });
 
 export const Message = mongoose.model<IMessage>('Message', MessageSchema);

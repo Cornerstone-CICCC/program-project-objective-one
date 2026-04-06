@@ -41,13 +41,14 @@ const UserSchema = new mongoose_1.Schema({
     username: { type: String, required: true, unique: true, trim: true },
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     password: { type: String, required: true, select: false },
-    bio: { type: String, trim: true, maxLength: 300, default: 'New Swap landed! 🚀' },
+    bio: { type: String, trim: true, maxlength: 300, default: 'New Swap landed! 🚀' },
     avatar_url: {
         type: String,
-        default: 'https://api.dicebear.com/9.x/bottts-neutral/svg?seed=Brooklynn',
+        default: 'https://api.dicebear.com/9.x/bottts-neutral/png?seed=Brooklynn',
     },
     total_trades: { type: Number, default: 0 },
     average_rating: { type: Number, default: 0 },
+    total_reviews: { type: Number, default: 0 },
     location_id: { type: mongoose_1.default.Schema.Types.ObjectId, ref: 'Location', required: true },
 }, {
     timestamps: true,

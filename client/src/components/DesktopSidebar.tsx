@@ -3,12 +3,13 @@ import { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
-
-import { messages } from '../data/mockData';
+import { getConversations } from '../api/message';
+import { socketService } from '../sockets/socket';
 
 const DesktopSidebar = () => {
   const navigation = useNavigation<any>();
   const [currentRoute, setCurrentRoute] = useState('Map');
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('state', (e: any) => {
@@ -20,7 +21,37 @@ const DesktopSidebar = () => {
     return unsubscribe;
   }, [navigation]);
 
-  const unreadCount = messages.filter((msg) => msg.unread).length;
+  const fetchUnreadCount = async () => {
+    try {
+      const conversations = await getConversations();
+      const total = conversations.reduce(
+        (sum: number, conversation: any) => sum + conversation.unreadCount,
+        0,
+      );
+      setUnreadCount(total);
+    } catch (err) {
+      console.error('Failed to fetch unread count:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [currentRoute]);
+
+  useEffect(() => {
+    const socket = socketService.socket;
+    if (!socket) return;
+
+    const handleNewMessage = () => {
+      fetchUnreadCount();
+    };
+
+    socket.on('new_message', handleNewMessage);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+    };
+  }, []);
 
   const navItems = [
     { name: 'Map', activeIcon: 'map', inactiveIcon: 'map-outline', label: 'Map' },
@@ -41,9 +72,9 @@ const DesktopSidebar = () => {
   ] as const;
 
   return (
-    <View className="bg-sidebar border-sidebar-border h-full w-64 flex-col border-r">
+    <View className="h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Logo Header */}
-      <View className="border-sidebar-border flex-row items-center gap-3 border-b p-6">
+      <View className="flex-row items-center gap-3 border-b border-sidebar-border p-6">
         {/* React Native SVG */}
         <Svg width="40" height="40" viewBox="0 0 40 40" fill="none">
           <Rect x="1" y="1" width="38" height="38" stroke="#4F46E5" strokeWidth="2" fill="none" />
@@ -55,7 +86,7 @@ const DesktopSidebar = () => {
           <Circle cx="30" cy="10" r="1" fill="#4F46E5" opacity="0.5" />
         </Svg>
 
-        <Text className="text-sidebar-primary text-2xl font-bold uppercase tracking-wider">
+        <Text className="text-2xl font-bold uppercase tracking-wider text-sidebar-primary">
           Swappa
         </Text>
       </View>
@@ -78,15 +109,15 @@ const DesktopSidebar = () => {
                 color={isActive ? '#FFFFFF' : '#64748B'}
               />
               <Text
-                className={`ml-3 uppercase tracking-wider ${isActive ? 'text-sidebar-primary-foreground font-medium' : 'text-muted-foreground'}`}
+                className={`ml-3 uppercase tracking-wider ${isActive ? 'font-medium text-sidebar-primary-foreground' : 'text-muted-foreground'}`}
               >
                 {label}
               </Text>
 
               {/* Notification Badge */}
               {name === 'Inbox' && unreadCount > 0 && (
-                <View className="bg-accent ml-auto rounded-full px-2 py-0.5">
-                  <Text className="text-accent-foreground text-xs font-bold">{unreadCount}</Text>
+                <View className="ml-auto rounded-full bg-accent px-2 py-0.5">
+                  <Text className="text-xs font-bold text-accent-foreground">{unreadCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -95,8 +126,8 @@ const DesktopSidebar = () => {
       </View>
 
       {/* Footer */}
-      <View className="border-sidebar-border border-t p-4">
-        <Text className="text-muted-foreground text-xs">
+      <View className="border-t border-sidebar-border p-4">
+        <Text className="text-xs text-muted-foreground">
           &copy; 2026 SWAPPA. All rights reserved.
         </Text>
       </View>

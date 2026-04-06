@@ -19,7 +19,7 @@ const getByUserId = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     return yield location_model_1.Location.findOne({ user_id: userId });
 });
 // Update location
-const update = (userId, lat, lng, address, city) => __awaiter(void 0, void 0, void 0, function* () {
+const update = (userId, lat, lng, city, province, country, address) => __awaiter(void 0, void 0, void 0, function* () {
     return yield location_model_1.Location.findOneAndUpdate({ user_id: userId }, {
         geo_location: {
             type: 'Point',
@@ -27,7 +27,9 @@ const update = (userId, lat, lng, address, city) => __awaiter(void 0, void 0, vo
         },
         address,
         city,
-    }, { new: true });
+        province,
+        country,
+    }, { new: true, runValidators: true });
 });
 // Find users within a radius
 const findNearby = (lng_1, lat_1, ...args_1) => __awaiter(void 0, [lng_1, lat_1, ...args_1], void 0, function* (lng, lat, maxDistanceInMeters = 5000) {

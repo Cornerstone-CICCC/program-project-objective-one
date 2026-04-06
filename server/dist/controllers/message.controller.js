@@ -14,6 +14,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const message_service_1 = __importDefault(require("../services/message.service"));
 /**
+ * Get Inbox Conversations (Aggregator)
+ * @route GET /messages/conversations
+ */
+const getConversations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user.id;
+        const conversations = yield message_service_1.default.getInboxConversations(userId);
+        res.status(200).json(conversations);
+    }
+    catch (err) {
+        console.error('Fetch inbox error:', err);
+        res.status(500).json({
+            message: 'Failed to retrieve inbox conversations.',
+        });
+    }
+});
+/**
  * Send a Message
  * @route POST /messages
  */
@@ -62,6 +79,25 @@ const getTradeMessages = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 /**
+ * Mark messages in a trade as read
+ * @route PUT /messages/:tradeId/read
+ */
+const markAsRead = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user.id;
+        const { tradeId } = req.params;
+        yield message_service_1.default.markMessagesAsRead(tradeId, userId);
+        res.status(200).json({
+            success: true,
+        });
+    }
+    catch (err) {
+        res.status(400).json({
+            message: err.message || 'Failed to mark read.',
+        });
+    }
+});
+/**
  * Edit a Message
  * @route PUT /messages/:id
  */
@@ -100,8 +136,10 @@ const deleteMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.default = {
+    getConversations,
     sendMessage,
     getTradeMessages,
+    markAsRead,
     editMessage,
     deleteMessage,
 };

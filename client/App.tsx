@@ -19,10 +19,14 @@ import {
 import RootNavigator from './src/navigation/RootNavigator';
 import './global.css';
 import { ThemeController } from './src/components/ThemeController';
+import { useAuthStore } from './src/store/auth.store';
+import { socketService } from './src/sockets/socket';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
+  const { user, token } = useAuthStore();
+
   const [fontsLoaded, fontError] = useFonts({
     'PlusJakartaSans-Regular': PlusJakartaSans_400Regular,
     'PlusJakartaSans-Medium': PlusJakartaSans_500Medium,
@@ -40,13 +44,30 @@ export default function App() {
     }
   }, [fontsLoaded, fontError]);
 
+  useEffect(() => {
+    if (user && token) {
+      console.log('App.tsx: User detected. Booting up Global Socket...');
+      socketService.connect(token);
+    } else {
+      socketService.disconnect();
+    }
+
+    return () => {
+      socketService.disconnect();
+    };
+  }, [user, token]);
+
   if (!fontsLoaded && !fontError) {
     return null;
   }
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
+      <NavigationContainer
+        documentTitle={{
+          formatter: () => 'SWAPPA',
+        }}
+      >
         <ThemeController />
         <RootNavigator />
       </NavigationContainer>

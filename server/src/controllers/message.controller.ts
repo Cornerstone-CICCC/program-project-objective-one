@@ -2,6 +2,25 @@ import { Request, Response } from 'express';
 import messageService from '../services/message.service';
 
 /**
+ * Get Inbox Conversations (Aggregator)
+ * @route GET /messages/conversations
+ */
+const getConversations = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+
+    const conversations = await messageService.getInboxConversations(userId);
+
+    res.status(200).json(conversations);
+  } catch (err: any) {
+    console.error('Fetch inbox error:', err);
+    res.status(500).json({
+      message: 'Failed to retrieve inbox conversations.',
+    });
+  }
+};
+
+/**
  * Send a Message
  * @route POST /messages
  */
@@ -56,6 +75,26 @@ const getTradeMessages = async (req: Request<{ tradeId: string }>, res: Response
 };
 
 /**
+ * Mark messages in a trade as read
+ * @route PUT /messages/:tradeId/read
+ */
+const markAsRead = async (req: Request<{ tradeId: string }>, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const { tradeId } = req.params;
+
+    await messageService.markMessagesAsRead(tradeId, userId);
+    res.status(200).json({
+      success: true,
+    });
+  } catch (err: any) {
+    res.status(400).json({
+      message: err.message || 'Failed to mark read.',
+    });
+  }
+};
+
+/**
  * Edit a Message
  * @route PUT /messages/:id
  */
@@ -96,8 +135,10 @@ const deleteMessage = async (req: Request<{ id: string }>, res: Response) => {
 };
 
 export default {
+  getConversations,
   sendMessage,
   getTradeMessages,
+  markAsRead,
   editMessage,
   deleteMessage,
 };

@@ -1,9 +1,30 @@
-import { useState } from 'react';
-import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { currentUser, nearbyUsers } from '../data/mockData';
+import { IUser } from '../api/auth';
+import { getUserById } from '../api/user';
+import { getMySkills, getUserSkills } from '../api/userSkill';
+import { proposeTrade } from '../api/trade';
+import AlertModal from '../components/AlertModal';
+
+export interface IUserSkillUI {
+  _id?: string;
+  skill_id: string;
+  name: string;
+  type: 'TEACH' | 'LEARN';
+  proficiency: string;
+  description: string;
+}
 
 const ProposeTradeScreen = () => {
   const navigation = useNavigation<any>();
@@ -11,10 +32,118 @@ const ProposeTradeScreen = () => {
   const insets = useSafeAreaInsets();
 
   const targetUserId = route.params?.userId;
-  const partner = nearbyUsers.find((u) => u.id === targetUserId);
 
-  const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
-  const [selectedReceive, setSelectedReceive] = useState<string | null>(null);
+  const [partner, setPartner] = useState<IUser | null>(null);
+  const [mySkills, setMySkills] = useState<IUserSkillUI[]>([]);
+  const [partnerSkills, setPartnerSkills] = useState<IUserSkillUI[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
+  const [selectedReceiveId, setSelectedReceiveId] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [location, setLocation] = useState('');
+
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    isSuccess: boolean;
+    variant: 'default' | 'error' | 'success';
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    isSuccess: false,
+    variant: 'default',
+  });
+
+  const isMessageOverLimit = message.length > 500;
+  const isLocationOverLimit = location.length > 100;
+  const isValid =
+    selectedOfferId !== null &&
+    selectedReceiveId !== null &&
+    !isMessageOverLimit &&
+    !isLocationOverLimit;
+
+  useEffect(() => {
+    const loadTradeData = async () => {
+      if (!targetUserId) return;
+      try {
+        const [partnerData, mySkillsData, partnerSkillsData] = await Promise.all([
+          getUserById(targetUserId),
+          getMySkills(),
+          getUserSkills(targetUserId),
+        ]);
+
+        setPartner(partnerData);
+
+        const formatSkills = (data: any[]) =>
+          data
+            .filter((item) => item.type === 'TEACH')
+            .map((item) => ({
+              _id: item._id,
+              skill_id: item.skill_id?._id || item.skill_id,
+              name: item.skill_id?.name || 'Unknown',
+              type: item.type,
+              proficiency: item.proficiency,
+              description: item.description,
+            }));
+
+        setMySkills(formatSkills(mySkillsData || []));
+        setPartnerSkills(formatSkills(partnerSkillsData || []));
+      } catch (err) {
+        console.error('Failed to load trade data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadTradeData();
+  }, [targetUserId]);
+
+  const handleSubmitProposal = async () => {
+    if (!isValid || !partner || !partner._id || !selectedOfferId || !selectedReceiveId) return;
+    setIsSubmitting(true);
+
+    try {
+      await proposeTrade({
+        receiver_id: partner._id,
+        offered_skill_id: selectedOfferId,
+        received_skill_id: selectedReceiveId,
+        message: message.trim() || undefined,
+        proposed_location: location.trim() || undefined,
+      });
+
+      setAlertConfig({
+        visible: true,
+        title: 'Swap Request Transmitted',
+        message: `Your swap proposal has been successfully transmitted to ${partner.firstname} ${partner.lastname}.`,
+        isSuccess: true,
+        variant: 'success',
+      });
+    } catch (err: any) {
+      setAlertConfig({
+        visible: true,
+        title: 'System_Error',
+        message: err.message || 'Failed to send proposal. Please try again.',
+        isSuccess: false,
+        variant: 'error',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background px-6">
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text className="mt-4 text-center font-technical text-sm uppercase tracking-wider text-muted-foreground">
+          Initializing_Swap_Matrix...
+        </Text>
+      </View>
+    );
+  }
 
   if (!partner) {
     return (
@@ -25,29 +154,13 @@ const ProposeTradeScreen = () => {
         </Text>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          className="mt-6 rounded-sm border-2 border-solid border-primary px-6 py-3 active:bg-muted"
+          className="mt-6 rounded-sm border-2 border-solid border-primary px-6 py-3 active:opacity-70"
         >
           <Text className="font-technical uppercase text-primary">Return to Previous</Text>
         </TouchableOpacity>
       </View>
     );
   }
-
-  const isValid = selectedOffer !== null && selectedReceive !== null;
-
-  const handleSubmitProposal = () => {
-    if (!isValid) return;
-
-    console.log(
-      `Proposing Trade to ${partner.name}: Give [${selectedOffer}] for [${selectedReceive}]`,
-    );
-
-    Alert.alert(
-      'Proposal Sent',
-      `Your trade request has been successfully transmitted to ${partner.name}.`,
-      [{ text: 'Acknowledge', onPress: () => navigation.goBack() }],
-    );
-  };
 
   return (
     <View className="flex-1 bg-background">
@@ -60,15 +173,16 @@ const ProposeTradeScreen = () => {
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             className="ml-[-8px] rounded-sm p-2 active:bg-muted"
+            disabled={isSubmitting}
           >
             <Ionicons name="close" size={28} color="#64748B" />
           </TouchableOpacity>
         </View>
         <Text className="font-technical text-2xl uppercase tracking-wider text-primary">
-          Draft_Proposal
+          Initialize_Swap
         </Text>
         <Text className="mt-2 font-body text-sm text-muted-foreground">
-          Configure the parameters of your skill exchange.
+          Configure the parameters of your skill swap.
         </Text>
       </View>
 
@@ -80,15 +194,17 @@ const ProposeTradeScreen = () => {
         {/* Target Partner Card */}
         <View className="mb-8 flex-row items-center gap-4 rounded-sm border-2 border-solid border-border bg-muted p-4">
           <Image
-            source={{ uri: partner.avatar }}
+            source={{ uri: partner.avatar_url || 'https://placehold.co/150' }}
             className="h-14 w-14 rounded-sm border-2 border-solid border-muted-foreground bg-card"
-            resizeMode="cover"
+            resizeMode="contain"
           />
           <View>
             <Text className="mb-1 font-technical text-[10px] uppercase tracking-wider text-muted-foreground">
               Target_Recipient
             </Text>
-            <Text className="font-body text-lg font-medium text-foreground">{partner.name}</Text>
+            <Text className="font-body text-lg font-medium text-foreground">
+              {partner.firstname} {partner.lastname}
+            </Text>
           </View>
         </View>
 
@@ -98,30 +214,51 @@ const ProposeTradeScreen = () => {
             <Text className="font-technical text-sm uppercase tracking-wider text-foreground">
               1. You_Provide
             </Text>
-            {selectedOffer && <Ionicons name="checkmark-circle" size={16} color="#4f46e5" />}
+            {selectedOfferId && <Ionicons name="checkmark-circle" size={16} color="#4f46e5" />}
           </View>
           <Text className="mb-4 font-body text-xs text-muted-foreground">
             Select a skill from your active repertoire to offer in this exchange.
           </Text>
 
           <View className="flex-col gap-2">
-            {currentUser.offering.map((skill) => {
-              const isSelected = selectedOffer === skill;
-              return (
-                <TouchableOpacity
-                  key={`offer-${skill}`}
-                  onPress={() => setSelectedOffer(skill)}
-                  className={`flex-row items-center justify-between rounded-sm border-2 border-solid p-4 active:opacity-70 ${isSelected ? 'border-primary bg-primary' : 'border-border bg-card'}`}
-                >
-                  <Text
-                    className={`font-body text-sm ${isSelected ? 'text-white' : 'text-foreground'}`}
+            {mySkills.length === 0 ? (
+              <Text className="font-body text-sm text-red-500">
+                You must add an Offering skill to your profile before you can trade!
+              </Text>
+            ) : (
+              mySkills.map((skill) => {
+                const isSelected = selectedOfferId === skill.skill_id;
+                return (
+                  <TouchableOpacity
+                    key={`offer-${skill.skill_id}`}
+                    onPress={() => setSelectedOfferId(skill.skill_id)}
+                    className={`flex-row items-center justify-between rounded-sm border-2 border-solid p-4 active:opacity-70 ${isSelected ? 'border-primary bg-primary' : 'border-border bg-card'}`}
                   >
-                    {skill}
-                  </Text>
-                  {isSelected && <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
-                </TouchableOpacity>
-              );
-            })}
+                    <Text
+                      className={`flex-1 font-body text-sm font-medium ${isSelected ? 'text-primary-foreground' : 'text-foreground'}`}
+                      numberOfLines={1}
+                    >
+                      {skill.name}
+                    </Text>
+
+                    <View className="flex-row items-center gap-3 px-2">
+                      <View
+                        className={`rounded-sm px-2 py-1 ${isSelected ? 'bg-white/20' : 'bg-muted'}`}
+                      >
+                        <Text
+                          className={`font-technical text-[10px] uppercase ${isSelected ? 'text-primary-foreground' : 'text-muted-foreground'}`}
+                        >
+                          {skill.proficiency}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="w-5 items-center justify-center">
+                      {isSelected && <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </View>
         </View>
 
@@ -131,30 +268,104 @@ const ProposeTradeScreen = () => {
             <Text className="font-technical text-sm uppercase tracking-wider text-foreground">
               2. You_Receive
             </Text>
-            {selectedReceive && <Ionicons name="checkmark-circle" size={16} color="#4f46e5" />}
+            {selectedReceiveId && <Ionicons name="checkmark-circle" size={16} color="#4f46e5" />}
           </View>
           <Text className="mb-4 font-body text-xs text-muted-foreground">
-            Select the desired skill you wish to acquire from {partner.name}.
+            Select the desired skill you wish to acquire from {partner.firstname} {partner.lastname}
+            .
           </Text>
 
           <View className="flex-col gap-2">
-            {partner.offering.map((skill) => {
-              const isSelected = selectedReceive === skill;
-              return (
-                <TouchableOpacity
-                  key={`receive-${skill}`}
-                  onPress={() => setSelectedReceive(skill)}
-                  className={`flex-row items-center justify-between rounded-sm border-2 border-solid p-4 active:opacity-70 ${isSelected ? 'border-primary bg-primary' : 'border-border bg-card'}`}
-                >
-                  <Text
-                    className={`font-body text-sm ${isSelected ? 'text-white' : 'text-foreground'}`}
+            {partnerSkills.length === 0 ? (
+              <Text className="font-body text-sm text-red-500">
+                This user has no skills to offer.
+              </Text>
+            ) : (
+              partnerSkills.map((skill) => {
+                const isSelected = selectedReceiveId === skill.skill_id;
+                return (
+                  <TouchableOpacity
+                    key={`receive-${skill.skill_id}`}
+                    onPress={() => setSelectedReceiveId(skill.skill_id)}
+                    className={`flex-row items-center justify-between rounded-sm border-2 border-solid p-4 active:opacity-70 ${isSelected ? 'border-primary bg-primary' : 'border-border bg-card'}`}
                   >
-                    {skill}
-                  </Text>
-                  {isSelected && <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
-                </TouchableOpacity>
-              );
-            })}
+                    <Text
+                      className={`flex-1 font-body text-sm font-medium ${isSelected ? 'text-primary-foreground' : 'text-foreground'}`}
+                    >
+                      {skill.name}
+                    </Text>
+                    <View className="flex-row items-center gap-3 px-2">
+                      <View
+                        className={`rounded-sm px-2 py-1 ${isSelected ? 'bg-white/20' : 'bg-muted'}`}
+                      >
+                        <Text
+                          className={`font-technical text-[10px] uppercase ${isSelected ? 'text-primary-foreground' : 'text-muted-foreground'}`}
+                        >
+                          {skill.proficiency}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="w-5 items-center justify-center">
+                      {isSelected && <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+        </View>
+
+        {/* Trade Details (Message & Location) */}
+        <View className="mb-8">
+          <View className="mb-3 flex-row items-center justify-between">
+            <Text className="font-technical text-sm uppercase tracking-wider text-foreground">
+              3. Swap_Parameters
+            </Text>
+          </View>
+
+          {/* Location Input */}
+          <View className="mb-4">
+            <Text
+              className={`mb-2 font-technical text-xs uppercase tracking-wider ${isLocationOverLimit ? 'text-red-500' : 'text-muted-foreground'}`}
+            >
+              Proposed Location / Platform
+            </Text>
+            <TextInput
+              value={location}
+              onChangeText={setLocation}
+              placeholder="e.g., Coffee Shop, Zoom, Discord..."
+              placeholderTextColor="#64748B"
+              className={`w-full rounded-sm border-2 border-solid bg-card px-4 py-3 font-body text-foreground ${isLocationOverLimit ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-primary'}`}
+            />
+            <Text
+              className={`mt-1 text-right font-technical text-[10px] uppercase tracking-wider ${isLocationOverLimit ? 'font-bold text-red-500' : 'text-muted-foreground'}`}
+            >
+              {location.length} / 100
+            </Text>
+          </View>
+
+          {/* Message Input */}
+          <View className="mb-4">
+            <Text
+              className={`mb-2 font-technical text-xs uppercase tracking-wider ${isMessageOverLimit ? 'text-red-500' : 'text-muted-foreground'}`}
+            >
+              Initial Message
+            </Text>
+            <TextInput
+              value={message}
+              onChangeText={setMessage}
+              placeholder={`Hi ${partner.firstname}, I'd love to initiate a swap...`}
+              placeholderTextColor="#64748B"
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              className={`min-h-[80px] w-full rounded-sm border-2 border-solid bg-card px-4 py-3 font-body text-foreground ${isMessageOverLimit ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-primary'}`}
+            />
+            <Text
+              className={`mt-1 text-right font-technical text-[10px] uppercase tracking-wider ${isMessageOverLimit ? 'font-bold text-red-500' : 'text-muted-foreground'}`}
+            >
+              {message.length} / 500
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -166,18 +377,39 @@ const ProposeTradeScreen = () => {
       >
         <TouchableOpacity
           onPress={handleSubmitProposal}
-          disabled={!isValid}
-          className={`w-full flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid py-4 ${isValid ? 'border-primary bg-primary active:opacity-80' : 'border-muted-foreground bg-muted opacity-50'}`}
+          disabled={!isValid || isSubmitting}
+          className={`w-full flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid py-4 ${isValid && !isSubmitting ? 'border-primary bg-primary active:opacity-80' : 'border-muted-foreground bg-muted opacity-50'}`}
         >
-          <Text
-            className="font-technical text-sm uppercase tracking-wider"
-            style={{ color: isValid ? '#FFFFFF' : '#64748B' }}
-          >
-            {isValid ? 'Transmit_Proposal' : 'Awaiting_Selection'}
-          </Text>
-          {isValid && <Ionicons name="send" size={16} color="#FFFFFF" style={{ marginLeft: 4 }} />}
+          {isSubmitting ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <>
+              <Text
+                className="font-technical text-sm uppercase tracking-wider"
+                style={{ color: isValid ? '#FFFFFF' : '#64748B' }}
+              >
+                {isValid ? 'Transmit_Swap_Request' : 'Awaiting_Selection'}
+              </Text>
+              {isValid && (
+                <Ionicons name="send" size={16} color="#FFFFFF" style={{ marginLeft: 4 }} />
+              )}
+            </>
+          )}
         </TouchableOpacity>
       </View>
+
+      <AlertModal
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        variant={alertConfig.variant}
+        onClose={() => {
+          setAlertConfig((prev) => ({ ...prev, visible: false }));
+          if (alertConfig.isSuccess) {
+            navigation.navigate('MainApp', { screen: 'Swaps' });
+          }
+        }}
+      />
     </View>
   );
 };

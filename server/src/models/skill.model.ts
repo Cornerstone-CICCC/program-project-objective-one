@@ -4,7 +4,7 @@ export interface ISkill extends Document {
   name: string;
   category: string;
   is_active: boolean;
-  created_at: Date;
+  createdAt: Date;
 }
 
 const SkillSchema: Schema = new Schema(

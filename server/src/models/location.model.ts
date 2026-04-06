@@ -6,8 +6,12 @@ export interface ILocation extends Document {
     type: string;
     coordinates: [number, number];
   };
-  address: string;
+  address?: string;
   city: string;
+  province: string;
+  country: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const LocationSchema: Schema = new Schema(
@@ -31,8 +35,10 @@ const LocationSchema: Schema = new Schema(
         },
       },
     },
-    address: { type: String, required: true, trim: true },
+    address: { type: String, required: false, trim: true },
     city: { type: String, required: true, trim: true },
+    province: { type: String, required: true, trim: true },
+    country: { type: String, required: true, trim: true },
   },
   {
     timestamps: true,

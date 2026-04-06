@@ -30,11 +30,14 @@ const recalculateUserAverage = (userId) => __awaiter(void 0, void 0, void 0, fun
     ]);
     if (stats.length > 0) {
         const roundedAverage = Math.round(stats[0].averageRating * 10) / 10;
-        yield user_model_1.User.findByIdAndUpdate(userId, { average_rating: roundedAverage });
+        yield user_model_1.User.findByIdAndUpdate(userId, {
+            average_rating: roundedAverage,
+            total_reviews: stats[0].numberOfReviews,
+        });
     }
     else {
         // If they deleted their ONLY review, reset the average to 0
-        yield user_model_1.User.findByIdAndUpdate(userId, { average_rating: 0 });
+        yield user_model_1.User.findByIdAndUpdate(userId, { average_rating: 0, total_reviews: 0 });
     }
 });
 // Leaving a Rating & Review (Create)
@@ -82,6 +85,7 @@ const getReviewsForUser = (reviewee_id) => __awaiter(void 0, void 0, void 0, fun
         path: 'trade_id',
         populate: [
             { path: 'offered_skill_id', select: 'name category' },
+            { path: 'received_skill_id', select: 'name category' },
             { path: 'sought_skill_id', select: 'name category' },
         ],
     })
@@ -118,10 +122,20 @@ const deleteRating = (rating_id, reviewer_id) => __awaiter(void 0, void 0, void 
 const checkMyReview = (trade_id, reviewer_id) => __awaiter(void 0, void 0, void 0, function* () {
     return yield rating_model_1.Rating.findOne({ trade_id, reviewer_id });
 });
+// Sync all users in the database (One-time)
+const syncAllUserRatings = () => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('Starting Database Sync for Rating...');
+    const users = yield user_model_1.User.find({});
+    for (const user of users) {
+        yield recalculateUserAverage(user._id.toString());
+    }
+    console.log(`Successfully synced ${users.length} users!`);
+});
 exports.default = {
     createRating,
     getReviewsForUser,
     updateRating,
     deleteRating,
     checkMyReview,
+    syncAllUserRatings,
 };
