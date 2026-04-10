@@ -17,6 +17,7 @@ import ratingRouter from './routes/rating.routes';
 import messageRouter from './routes/message.routes';
 import notificationRouter from './routes/notification.routes';
 import ratingService from './services/rating.service';
+import aiRouter from './routes/ai.routes';
 
 dotenv.config();
 
@@ -65,6 +66,7 @@ app.use('/trades', tradeRouter);
 app.use('/ratings', ratingRouter);
 app.use('/messages', messageRouter);
 app.use('/notifications', notificationRouter);
+app.use('/ai', aiRouter);
 
 app.get('/', (req: Request, res: Response) => {
   res.status(200).send('Server is running!');

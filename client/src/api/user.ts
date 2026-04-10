@@ -12,6 +12,24 @@ export interface UpdateProfileData {
   newPassword?: string;
 }
 
+export const getAllUsers = async () => {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${BASE_URL}/users`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to fetch users.');
+    }
+    return await res.json();
+  } catch (err) {
+    console.error('Get all users error:', err);
+    return [];
+  }
+};
+
 export const getUserById = async (userId: string): Promise<IUser | null> => {
   try {
     const headers = await getAuthHeaders();
