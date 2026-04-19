@@ -31,6 +31,7 @@ const message_routes_1 = __importDefault(require("./routes/message.routes"));
 const notification_routes_1 = __importDefault(require("./routes/notification.routes"));
 const rating_service_1 = __importDefault(require("./services/rating.service"));
 const ai_routes_1 = __importDefault(require("./routes/ai.routes"));
+const network_routes_1 = __importDefault(require("./routes/network.routes"));
 dotenv_1.default.config();
 // Create server
 const app = (0, express_1.default)();
@@ -69,6 +70,7 @@ app.use('/ratings', rating_routes_1.default);
 app.use('/messages', message_routes_1.default);
 app.use('/notifications', notification_routes_1.default);
 app.use('/ai', ai_routes_1.default);
+app.use('/network', network_routes_1.default);
 app.get('/', (req, res) => {
     res.status(200).send('Server is running!');
 });

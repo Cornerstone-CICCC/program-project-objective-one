@@ -7,7 +7,7 @@ import InboxScreen from '../screens/InboxScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SwapsScreen from '../screens/SwapsScreen';
-import DiscoveryMapScreen from '../screens/DiscoveryMapScreen';
+import SkillEconomyScreen from '../screens/SkillEconomyScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -24,7 +24,7 @@ export function MainTabNavigator() {
           screenOptions={{ headerShown: false }}
           tabBar={(props) => (isDesktop ? null : <BottomNavigation {...props} />)}
         >
-          <Tab.Screen name="Map" component={DiscoveryMapScreen} />
+          <Tab.Screen name="Economy" component={SkillEconomyScreen} />
           <Tab.Screen name="Search" component={SearchScreen} />
           <Tab.Screen name="Swaps" component={SwapsScreen} />
           <Tab.Screen name="Inbox" component={InboxScreen} />

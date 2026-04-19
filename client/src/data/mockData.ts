@@ -237,3 +237,71 @@ export const popularSkills = [
   'UI/UX Design',
   'Video Editing',
 ];
+
+// Skill Economy Data
+export interface SkillDemand {
+  skill: string;
+  seeking: number;
+  offering: number;
+  trend: number; // percentage change this week
+}
+
+export interface NetworkStats {
+  activeSwapsThisWeek: number;
+  newNodesThisWeek: number;
+  totalSkillsInCirculation: number;
+}
+
+export const networkStats: NetworkStats = {
+  activeSwapsThisWeek: 142,
+  newNodesThisWeek: 24,
+  totalSkillsInCirculation: 850,
+};
+
+export const arbitrageOpportunities: SkillDemand[] = [
+  {
+    skill: '3D Modeling',
+    seeking: 120,
+    offering: 12,
+    trend: 0,
+  },
+  {
+    skill: 'Rust Programming',
+    seeking: 89,
+    offering: 8,
+    trend: 0,
+  },
+  {
+    skill: 'Motion Graphics',
+    seeking: 76,
+    offering: 9,
+    trend: 0,
+  },
+];
+
+export const trendingSkills: SkillDemand[] = [
+  {
+    skill: 'Rust Programming',
+    seeking: 89,
+    offering: 8,
+    trend: 45,
+  },
+  {
+    skill: 'Video Editing',
+    seeking: 64,
+    offering: 32,
+    trend: 20,
+  },
+  {
+    skill: 'AI Prompt Engineering',
+    seeking: 58,
+    offering: 15,
+    trend: 67,
+  },
+  {
+    skill: 'React Development',
+    seeking: 95,
+    offering: 48,
+    trend: 12,
+  },
+];

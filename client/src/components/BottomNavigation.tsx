@@ -44,7 +44,12 @@ const BottomNavigation = ({ state, navigation }: any) => {
   }, []);
 
   const navItems = [
-    { name: 'Map', activeIcon: 'map', inactiveIcon: 'map-outline', label: 'Map' },
+    {
+      name: 'Economy',
+      activeIcon: 'analytics',
+      inactiveIcon: 'analytics-outline',
+      label: 'Economy',
+    },
     { name: 'Search', activeIcon: 'search', inactiveIcon: 'search-outline', label: 'Search' },
     {
       name: 'Swaps',
