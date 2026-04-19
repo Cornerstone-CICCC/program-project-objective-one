@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
@@ -21,6 +21,7 @@ import { getAllUsers } from '../api/user';
 
 const SearchScreen = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const insets = useSafeAreaInsets();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,6 +42,13 @@ const SearchScreen = () => {
   const [aiError, setAiError] = useState<string | null>(null);
 
   const [displayLimit, setDisplayLimit] = useState(5);
+
+  useEffect(() => {
+    if (route.params?.prefilledSkill) {
+      setSearchQuery(route.params.prefilledSkill);
+      navigation.setParams({ prefilledSkill: undefined });
+    }
+  }, [route.params?.prefilledSkill, navigation]);
 
   useEffect(() => {
     setDisplayLimit(5);

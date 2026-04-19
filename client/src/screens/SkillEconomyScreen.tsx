@@ -1,28 +1,105 @@
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  arbitrageOpportunities,
-  currentUser,
-  networkStats,
-  trendingSkills,
-} from '../data/mockData';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+  ActivityIndicator,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuthStore } from '../store/auth.store';
+import { useCallback, useEffect, useState } from 'react';
+import { getNetworkPulse } from '../api/network';
 
 const SkillEconomyScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
 
-  const userValuableSkill =
-    currentUser.offering.find(
-      (skill) =>
-        trendingSkills.some((ts) => ts.skill === skill) ||
-        arbitrageOpportunities.some((ao) => ao.skill === skill),
-    ) || currentUser.offering[0];
+  const [pulseData, setPulseData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPulseData = async () => {
+    try {
+      setError(null);
+      const data = await getNetworkPulse();
+      if (data) {
+        setPulseData(data);
+      } else {
+        setError('Could not connect to the network.');
+      }
+    } catch (err) {
+      setError('Failed to load market intelligence.');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPulseData();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    fetchPulseData();
+  }, []);
 
   const handleSkillClick = (skill: string) => {
     navigation.navigate('Search', { prefilledSkill: skill });
   };
+
+  const userOfferings = user?.offering || [];
+
+  const getUserValuableSkill = () => {
+    const fallback = userOfferings.length > 0 ? userOfferings[0] : 'Top';
+
+    if (!pulseData || userOfferings.length === 0) return fallback;
+
+    return (
+      userOfferings.find(
+        (skill: string) =>
+          pulseData.trendingSkills.some((ts: any) => ts.skill === skill) ||
+          pulseData.arbitrageOpportunities.some((ao: any) => ao.skill === skill),
+      ) || fallback
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" color="#06b6d4" />
+        <Text className="mt-4 font-technical text-sm uppercase tracking-widest text-muted-foreground">
+          Establishing Uplink...
+        </Text>
+      </View>
+    );
+  }
+
+  if (error || !pulseData) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background px-6">
+        <Ionicons name="warning-outline" size={48} color="#ef4444" />
+        <Text className="mt-4 text-center font-body text-base text-foreground">{error}</Text>
+        <TouchableOpacity
+          onPress={() => {
+            setIsLoading(true);
+            fetchPulseData();
+          }}
+          className="mt-6 rounded-sm bg-primary px-6 py-3"
+        >
+          <Text className="font-technical text-sm font-medium uppercase tracking-wider text-white">
+            Retry Connection
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -33,15 +110,36 @@ const SkillEconomyScreen = () => {
         paddingHorizontal: 16,
       }}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={onRefresh}
+          tintColor="#06b6d4"
+          colors={['#06b6d4']}
+        />
+      }
     >
       {/* Header */}
-      <View className="mb-8">
-        <Text className="mb-2 font-technical text-3xl uppercase tracking-wider text-foreground">
-          Skill_Economy
-        </Text>
-        <Text className="font-body text-sm text-muted-foreground">
-          Real-time market intelligence for the Swappa network
-        </Text>
+      <View className="mb-8 flex-row items-start justify-between">
+        <View className="flex-1">
+          <Text className="mb-2 font-technical text-3xl uppercase tracking-wider text-foreground">
+            Skill_Economy
+          </Text>
+          <Text className="font-body text-sm text-muted-foreground">
+            Real-time market intelligence for the Swappa network
+          </Text>
+        </View>
+
+        {Platform.OS === 'web' && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onRefresh}
+            disabled={isRefreshing}
+            className={`ml-4 rounded-full bg-muted p-3 ${isRefreshing ? 'opacity-50' : ''}`}
+          >
+            <Ionicons name="sync" size={20} color="#06b6d4" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Network Pulse */}
@@ -55,7 +153,7 @@ const SkillEconomyScreen = () => {
         <View className="flex-row justify-between gap-3">
           <View className="flex-1 rounded-sm border border-border bg-card p-4">
             <Text className="mb-1 font-technical text-3xl font-bold text-accent">
-              {networkStats.activeSwapsThisWeek}
+              {pulseData.networkStats.activeSwapsThisWeek}
             </Text>
             <Text className="font-technical text-[10px] uppercase tracking-wide text-muted-foreground">
               Active Swaps
@@ -63,7 +161,7 @@ const SkillEconomyScreen = () => {
           </View>
           <View className="flex-1 rounded-sm border border-border bg-card p-4">
             <Text className="mb-1 font-technical text-3xl font-bold text-primary">
-              +{networkStats.newNodesThisWeek}
+              +{pulseData.networkStats.newNodesThisWeek}
             </Text>
             <Text className="font-technical text-[10px] uppercase tracking-wide text-muted-foreground">
               New Nodes
@@ -71,7 +169,7 @@ const SkillEconomyScreen = () => {
           </View>
           <View className="flex-1 rounded-sm border border-border bg-card p-4">
             <Text className="mb-1 font-technical text-3xl font-bold text-foreground">
-              {networkStats.totalSkillsInCirculation}
+              {pulseData.networkStats.totalSkillsInCirculation}
             </Text>
             <Text className="font-technical text-[10px] uppercase tracking-wide text-muted-foreground">
               Total Skills
@@ -94,10 +192,15 @@ const SkillEconomyScreen = () => {
           </Text>
 
           <View className="gap-6">
-            {arbitrageOpportunities.map((opportunity) => {
-              const seekingPercent = Math.min(100, (opportunity.seeking / 120) * 100);
-              const offeringPercent = Math.min(100, (opportunity.offering / 120) * 100);
-              const ratio = (opportunity.seeking / opportunity.offering).toFixed(1);
+            {pulseData.arbitrageOpportunities.map((opportunity: any) => {
+              const maxScale = Math.max(opportunity.seeking, 10);
+              const seekingPercent = Math.min(100, (opportunity.seeking / maxScale) * 100);
+              const offeringPercent = Math.min(100, (opportunity.offering / maxScale) * 100);
+              const rawRatio =
+                opportunity.offering > 0
+                  ? opportunity.seeking / opportunity.offering
+                  : opportunity.seeking;
+              const ratioDisplay = rawRatio.toFixed(1);
 
               return (
                 <View key={opportunity.skill}>
@@ -107,13 +210,13 @@ const SkillEconomyScreen = () => {
                       onPress={() => handleSkillClick(opportunity.skill)}
                       className="flex-row items-center gap-2 rounded-sm bg-muted px-3 py-1.5"
                     >
-                      <Text className="font-body text-base font-medium text-foreground">
+                      <Ionicons name="search" size={14} color="#06b6d4" />
+                      <Text className="font-body text-sm font-medium text-foreground">
                         {opportunity.skill}
                       </Text>
-                      <Ionicons name="arrow-forward" size={14} color="#64748B" />
                     </TouchableOpacity>
                     <Text className="font-technical text-xs font-bold uppercase text-amber-500">
-                      {ratio}:1 Ratio
+                      {ratioDisplay}:1 Ratio
                     </Text>
                   </View>
 
@@ -161,7 +264,7 @@ const SkillEconomyScreen = () => {
           </Text>
         </View>
         <View className="flex-row flex-wrap justify-between gap-y-3">
-          {trendingSkills.map((skill) => (
+          {pulseData.trendingSkills.map((skill: any) => (
             <TouchableOpacity
               key={skill.skill}
               activeOpacity={0.7}
@@ -218,7 +321,7 @@ const SkillEconomyScreen = () => {
               <Text className="mb-2 font-body text-base text-foreground">
                 Your{' '}
                 <Text className="font-bold tracking-wide text-primary">
-                  [ {userValuableSkill} ]
+                  [ {getUserValuableSkill()} ]
                 </Text>{' '}
                 skill is in high demand right now.
               </Text>
