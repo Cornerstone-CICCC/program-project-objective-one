@@ -86,10 +86,10 @@ const getReviewsForUser = async (reviewee_id: string) => {
       populate: [
         { path: 'offered_skill_id', select: 'name category' },
         { path: 'received_skill_id', select: 'name category' },
-        { path: 'sought_skill_id', select: 'name category' },
+        { path: 'sought_skill_id', select: 'name category', strictPopulate: false },
       ],
     })
-    .sort({ created_at: -1 });
+    .sort({ createdAt: -1 });
 };
 
 // Update (Edit an existing review)

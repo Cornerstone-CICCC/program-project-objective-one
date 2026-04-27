@@ -5,6 +5,7 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
+  useColorScheme,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -49,6 +50,11 @@ const SwapsScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
+
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
+
   const { user } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState<TradeTab>('active');
@@ -238,7 +244,7 @@ const SwapsScreen = () => {
         const msg = res?.message || 'Completion recorded. Waiting for your partner to confirm.';
         setAlertConfig({
           visible: true,
-          title: 'Status_Updated',
+          title: 'Status Updated',
           message: msg,
           variant: 'success',
         });
@@ -247,7 +253,7 @@ const SwapsScreen = () => {
       setConfirmConfig({ visible: false, swapId: '', actionType: null });
       setAlertConfig({
         visible: true,
-        title: 'System_Error',
+        title: 'System Error',
         message: err.message || 'Failed to update swap status.',
         variant: 'error',
       });
@@ -285,22 +291,22 @@ const SwapsScreen = () => {
       case 'ACCEPTED':
         return {
           iconName: 'time-outline',
-          text: 'IN_PROGRESS',
-          bgColor: 'bg-accent',
+          text: 'IN PROGRESS',
+          bgColor: 'bg-primary',
           textColor: 'text-white',
         };
       case 'PENDING':
         return {
           iconName: 'alert-circle',
-          text: canAccept ? 'ACTION_REQUIRED' : 'AWAITING_RESPONSE',
-          bgColor: canAccept ? 'bg-yellow-500' : 'bg-[#64748b]',
+          text: canAccept ? 'ACTION REQUIRED' : 'AWAITING RESPONSE',
+          bgColor: canAccept ? 'bg-amber-500 dark:bg-amber-600' : 'bg-slate-500 dark:bg-slate-600',
           textColor: 'text-white',
         };
       case 'COMPLETED':
         return {
           iconName: 'checkmark-circle',
           text: 'COMPLETED',
-          bgColor: 'bg-green-600',
+          bgColor: 'bg-emerald-500 dark:bg-emerald-600',
           textColor: 'text-white',
         };
       case 'REJECTED':
@@ -308,7 +314,7 @@ const SwapsScreen = () => {
         return {
           iconName: 'close-circle',
           text: 'TERMINATED',
-          bgColor: 'bg-red-600',
+          bgColor: 'bg-destructive dark:bg-red-600',
           textColor: 'text-white',
         };
       default:
@@ -324,13 +330,13 @@ const SwapsScreen = () => {
   const getBadgeColor = (proficiency: string) => {
     switch (proficiency?.toUpperCase()) {
       case 'EXPERT':
-        return 'text-purple-500 border-purple-500';
+        return 'bg-purple-600 border-purple-700';
       case 'ADVANCED':
-        return 'text-green-500 border-green-500';
+        return 'bg-emerald-600 border-emerald-700';
       case 'INTERMEDIATE':
-        return 'text-yellow-500 border-yellow-500';
+        return 'bg-amber-600 border-amber-700';
       default:
-        return 'text-blue-500 border-blue-500';
+        return 'bg-blue-600 border-blue-700';
     }
   };
 
@@ -340,12 +346,12 @@ const SwapsScreen = () => {
     <View className="flex-1 bg-background">
       {/* Header & Tabs */}
       <View
-        className="border-b-2 border-solid border-border bg-card px-6 pb-6"
+        className="border-b-2 border-solid border-border bg-card px-4 pb-4"
         style={{ paddingTop: Math.max(insets.top, 24) }}
       >
         <View className="mb-6 flex-row items-center justify-between">
-          <Text className="font-technical text-2xl uppercase tracking-wider text-foreground">
-            Swap_Control_Center
+          <Text className="font-technical text-2xl uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            My Swaps
           </Text>
 
           <TouchableOpacity
@@ -354,7 +360,7 @@ const SwapsScreen = () => {
           >
             <Ionicons name="notifications-outline" size={24} color="#64748B" />
             {hasUnread && (
-              <View className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full border-2 border-solid border-card bg-primary" />
+              <View className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full border-2 border-solid border-card bg-red-500" />
             )}
           </TouchableOpacity>
         </View>
@@ -366,10 +372,10 @@ const SwapsScreen = () => {
               <TouchableOpacity
                 key={tab}
                 onPress={() => handleTabChange(tab)}
-                className={`flex-1 items-center justify-center rounded-sm border-2 border-solid py-3 active:opacity-80 ${isActive ? 'border-primary bg-primary' : 'border-border bg-card'}`}
+                className={`flex-1 items-center justify-center rounded-sm border-2 border-solid py-2.5 transition-colors active:opacity-80 ${isActive ? 'border-primary bg-primary' : 'border-border bg-card'}`}
               >
                 <Text
-                  className={`font-technical text-xs uppercase tracking-wider ${isActive ? 'text-white' : 'text-muted-foreground'}`}
+                  className={`font-body text-xs font-bold uppercase tracking-wider ${isActive ? 'text-white' : 'text-muted-foreground'}`}
                 >
                   {tab}
                 </Text>
@@ -382,25 +388,25 @@ const SwapsScreen = () => {
       {/* Trade List */}
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
           <View className="items-center justify-center py-12">
-            <ActivityIndicator size="large" color="#4F46E5" />
+            <ActivityIndicator size="large" color={primaryIconColor} />
             <Text className="mt-4 font-technical text-sm uppercase tracking-wider text-muted-foreground">
-              Retrieving_Swap_Data...
+              Loading Swaps...
             </Text>
           </View>
         ) : currentSwaps.length === 0 ? (
-          <View className="items-center justify-center py-12">
+          <View className="mt-4 items-center justify-center rounded-sm border-2 border-dashed border-border bg-card py-12">
             <Ionicons name="swap-horizontal" size={48} color="#64748B" />
-            <Text className="mt-4 font-technical text-sm uppercase tracking-wider text-muted-foreground">
-              No_{activeTab.toUpperCase()}_Swaps
+            <Text className="mt-4 font-body text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              No {activeTab.toUpperCase()} Swaps
             </Text>
-            <Text className="mt-2 px-4 text-center font-body text-sm text-muted-foreground">
+            <Text className="mt-2 px-8 text-center font-body text-xs text-muted-foreground">
               {activeTab === 'active' && 'Initialize a swap to start collaborating!'}
-              {activeTab === 'pending' && 'Check the map to find potential swap partners.'}
+              {activeTab === 'pending' && 'Check the Search tab to find potential swap partners.'}
               {activeTab === 'history' && 'Your completed and archived swaps will appear here.'}
             </Text>
           </View>
@@ -414,212 +420,221 @@ const SwapsScreen = () => {
                   key={swap.id}
                   activeOpacity={0.9}
                   onPress={() => setSelectedSwap(swap)}
-                  className="rounded-sm border-2 border-solid border-border bg-card p-4"
+                  className="overflow-hidden rounded-sm border-2 border-solid border-border bg-card shadow-sm"
                 >
-                  {/* Status Badge & Date */}
-                  <View className="mb-4 flex-row items-center justify-between">
-                    <View
-                      className={`flex-row items-center gap-1.5 rounded-sm px-3 py-1 ${badge.bgColor}`}
-                    >
-                      <Ionicons
-                        name={badge.iconName as any}
-                        size={14}
-                        color={badge.textColor === 'text-white' ? '#FFFFFF' : '#0f172a'}
-                      />
-                      <Text
-                        className={`font-technical text-[10px] font-bold uppercase ${badge.textColor}`}
+                  <View className="p-4 pb-3">
+                    {/* Status Badge & Date */}
+                    <View className="mb-4 flex-row items-center justify-between">
+                      <View
+                        className={`flex-row items-center gap-1.5 rounded-sm px-2 py-1 ${badge.bgColor}`}
                       >
-                        {badge.text}
-                      </Text>
-                    </View>
-
-                    <Text className="font-body text-xs text-muted-foreground">
-                      {new Date(swap.createdAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </Text>
-                  </View>
-
-                  {/* Trade Partner */}
-                  <View className="mb-4 flex-row items-center justify-between">
-                    <TouchableOpacity
-                      className="flex-row items-center gap-3 active:opacity-70"
-                      onPress={() => navigation.navigate('UserProfile', { userId: swap.partnerId })}
-                    >
-                      <Image
-                        source={{ uri: swap.partnerAvatar || 'https://placehold.co/150' }}
-                        className="h-12 w-12 rounded-sm border-2 border-solid border-muted-foreground bg-muted"
-                        resizeMode="contain"
-                      />
-                      <View>
-                        <Text className="mb-1 font-technical text-[10px] uppercase tracking-wider text-muted-foreground">
-                          Swap_Partner
-                        </Text>
-                        <Text className="font-body text-base font-medium text-foreground">
-                          {swap.partnerName}
+                        <Ionicons name={badge.iconName as any} size={14} color="#FFFFFF" />
+                        <Text className="font-body text-[10px] font-bold uppercase tracking-wider text-white">
+                          {badge.text}
                         </Text>
                       </View>
-                    </TouchableOpacity>
 
-                    <View className="flex-col items-end gap-2">
-                      {(swap.message || swap.proposedLocation) && (
-                        <View className="flex-row items-center gap-1 rounded-sm bg-muted px-2 py-1">
-                          <Ionicons name="chatbubble-ellipses" size={12} color="#64748B" />
-                          <Text className="font-technical text-[10px] text-muted-foreground">
-                            Has Note
+                      <Text className="font-body text-xs font-bold text-muted-foreground">
+                        {new Date(swap.createdAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </Text>
+                    </View>
+
+                    {/* Trade Partner */}
+                    <View className="mb-4 flex-row items-center justify-between">
+                      <TouchableOpacity
+                        className="flex-row items-center gap-3 active:opacity-70"
+                        onPress={() =>
+                          navigation.navigate('UserProfile', { userId: swap.partnerId })
+                        }
+                      >
+                        <View className="h-12 w-12 overflow-hidden rounded-sm border-2 border-muted-foreground bg-muted">
+                          <Image
+                            source={{ uri: swap.partnerAvatar || 'https://placehold.co/150' }}
+                            className="h-full w-full"
+                            resizeMode="contain"
+                          />
+                        </View>
+                        <View>
+                          <Text className="mb-0.5 font-body text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Swap Partner
+                          </Text>
+                          <Text className="font-body text-base font-bold text-foreground">
+                            {swap.partnerName}
                           </Text>
                         </View>
-                      )}
-
-                      {/* Notification if partner confirmed completion first */}
-                      {swap.status === 'ACCEPTED' && swap.partnerCompleted && !swap.myCompleted && (
-                        <View className="flex-row items-center gap-1 rounded-sm bg-green-500/20 px-2 py-1">
-                          <Ionicons name="checkmark-circle" size={12} color="#16a34a" />
-                          <Text className="font-technical text-[10px] uppercase text-green-600">
-                            Partner Confirmed
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-
-                  {/* Trade Details */}
-                  <View className="mb-4 flex-row items-center justify-between rounded-sm border-2 border-solid border-border bg-muted p-3">
-                    <View className="flex-1">
-                      <Text className="mb-1 font-technical text-[10px] uppercase text-muted-foreground">
-                        You_Provide
-                      </Text>
-                      <Text
-                        className="font-body text-sm font-medium text-foreground"
-                        numberOfLines={1}
-                      >
-                        {swap.offering}
-                      </Text>
-                    </View>
-
-                    <View className="px-2">
-                      <Ionicons name="swap-horizontal" size={20} color="#4f46e5" />
-                    </View>
-
-                    <View className="flex-1 items-end">
-                      <Text className="mb-1 font-technical text-[10px] uppercase text-muted-foreground">
-                        You_Receive
-                      </Text>
-                      <Text
-                        className="font-body text-sm font-medium text-foreground"
-                        numberOfLines={1}
-                      >
-                        {swap.receiving}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Action Buttons */}
-                  <View className="flex-row gap-2">
-                    {!['REJECTED', 'CANCELLED', 'PENDING'].includes(swap.status) && (
-                      <TouchableOpacity
-                        onPress={() =>
-                          navigation.navigate('Chat', {
-                            tradeId: swap.id,
-                            partnerId: swap.partnerId,
-                            partnerName: swap.partnerName,
-                            partnerAvatar: swap.partnerAvatar,
-                            offering: swap.offering,
-                            receiving: swap.receiving,
-                            tradeStatus: swap.status,
-                            proposedLocation: swap.proposedLocation,
-                            tradeMessage: swap.message,
-                            offeringProficiency: swap.offeringProficiency,
-                            offeringDesc: swap.offeringDesc,
-                            receivingProficiency: swap.receivingProficiency,
-                            receivingDesc: swap.receivingDesc,
-                          })
-                        }
-                        className="flex-1 items-center justify-center rounded-sm bg-primary py-3 active:opacity-80"
-                      >
-                        <Text className="font-technical text-xs uppercase tracking-wider text-white">
-                          Message
-                        </Text>
                       </TouchableOpacity>
-                    )}
 
-                    {/* Rate Partner button appears ONLY when fully completed */}
-                    {swap.status === 'COMPLETED' && (
-                      <TouchableOpacity
-                        onPress={() =>
-                          navigation.navigate('Rating', {
-                            tradeId: swap.id,
-                            partnerId: swap.partnerId,
-                            partnerName: swap.partnerName,
-                            partnerAvatar: swap.partnerAvatar,
-                          })
-                        }
-                        className={`flex-1 items-center justify-center rounded-sm border-2 border-solid py-3 active:opacity-70 ${swap.hasRated ? 'border-[#EAB308] bg-transparent' : 'border-[#EAB308] bg-[#EAB308]'}`}
-                      >
-                        <Text
-                          className={`font-technical text-xs uppercase tracking-wider ${swap.hasRated ? 'text-[#EAB308]' : 'text-[#0F172A]'} `}
-                        >
-                          {swap.hasRated ? 'Edit Rating' : 'Rate Partner'}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {/* Dual Confirmation Buttons */}
-                    {swap.status === 'ACCEPTED' && (
-                      <View className="flex-1 flex-row">
-                        {!swap.myCompleted ? (
-                          <TouchableOpacity
-                            onPress={() => handleStatusUpdate(swap.id, 'COMPLETED')}
-                            className="flex-1 items-center justify-center rounded-sm border-2 border-solid border-green-600 bg-transparent py-3 active:opacity-70"
-                          >
-                            <Text className="font-technical text-xs uppercase tracking-wider text-green-600">
-                              {swap.partnerCompleted ? 'Confirm Complete' : 'Complete'}
-                            </Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <View className="flex-1 items-center justify-center rounded-sm border-2 border-solid border-muted-foreground bg-muted py-3 opacity-60">
-                            <Text className="font-technical text-[10px] uppercase tracking-wider text-muted-foreground">
-                              Awaiting Partner
+                      <View className="flex-col items-end gap-2">
+                        {(swap.message || swap.proposedLocation) && (
+                          <View className="flex-row items-center gap-1 rounded-sm bg-muted px-2 py-1">
+                            <Ionicons name="chatbubble-ellipses" size={10} color="#64748B" />
+                            <Text className="font-body text-[10px] font-bold uppercase text-muted-foreground">
+                              Notes Attached
                             </Text>
                           </View>
                         )}
-                      </View>
-                    )}
 
-                    {swap.status === 'PENDING' && (
-                      <View className="flex-1 flex-row gap-2">
-                        {swap.canAccept ? (
-                          <>
-                            <TouchableOpacity
-                              onPress={() => handleStatusUpdate(swap.id, 'ACCEPTED')}
-                              className="flex-1 items-center justify-center rounded-sm border-2 border-solid border-primary bg-transparent py-3 active:opacity-70"
-                            >
-                              <Text className="font-technical text-xs uppercase tracking-wider text-primary">
-                                Authorize
+                        {/* Notification if partner confirmed completion first */}
+                        {swap.status === 'ACCEPTED' &&
+                          swap.partnerCompleted &&
+                          !swap.myCompleted && (
+                            <View className="flex-row items-center gap-1 rounded-sm bg-emerald-50 px-2 py-1 dark:bg-emerald-900/30">
+                              <Ionicons name="checkmark-circle" size={12} color="#10B981" />
+                              <Text className="font-body text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
+                                Partner Confirmed
                               </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={() => triggerConfirm(swap.id, 'REJECTED')}
-                              className="items-center justify-center rounded-sm border-2 border-solid border-red-500 bg-transparent px-4 py-3 active:opacity-70"
-                            >
-                              <Text className="font-technical text-xs uppercase tracking-wider text-red-500">
-                                Decline
-                              </Text>
-                            </TouchableOpacity>
-                          </>
-                        ) : (
-                          <TouchableOpacity
-                            onPress={() => triggerConfirm(swap.id, 'CANCELLED')}
-                            className="flex-1 items-center justify-center rounded-sm border-2 border-solid border-muted-foreground bg-transparent py-3 active:opacity-70"
-                          >
-                            <Text className="font-technical text-xs uppercase tracking-wider text-muted-foreground">
-                              Cancel Request
-                            </Text>
-                          </TouchableOpacity>
-                        )}
+                            </View>
+                          )}
                       </View>
-                    )}
+                    </View>
+
+                    {/* Trade Details */}
+                    <View className=" flex-row items-center justify-between rounded-sm border-2 border-solid border-border bg-muted p-3">
+                      <View className="flex-1">
+                        <Text className="mb-1 font-body text-[10px] font-bold uppercase text-muted-foreground">
+                          You Teach
+                        </Text>
+                        <Text
+                          className="font-body text-sm font-bold text-foreground"
+                          numberOfLines={1}
+                        >
+                          {swap.offering}
+                        </Text>
+                      </View>
+
+                      <View className="px-2">
+                        <Ionicons name="swap-horizontal" size={20} color={primaryIconColor} />
+                      </View>
+
+                      <View className="flex-1 items-end">
+                        <Text className="mb-1 font-body text-[10px] font-bold uppercase text-muted-foreground">
+                          You Learn
+                        </Text>
+                        <Text
+                          className="font-body text-sm font-bold text-foreground"
+                          numberOfLines={1}
+                        >
+                          {swap.receiving}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Action Buttons */}
+                    <View className="flex-row gap-2 pt-2">
+                      {!['REJECTED', 'CANCELLED', 'PENDING'].includes(swap.status) && (
+                        <TouchableOpacity
+                          onPress={() =>
+                            navigation.navigate('Chat', {
+                              tradeId: swap.id,
+                              partnerId: swap.partnerId,
+                              partnerName: swap.partnerName,
+                              partnerAvatar: swap.partnerAvatar,
+                              offering: swap.offering,
+                              receiving: swap.receiving,
+                              tradeStatus: swap.status,
+                              proposedLocation: swap.proposedLocation,
+                              tradeMessage: swap.message,
+                              offeringProficiency: swap.offeringProficiency,
+                              offeringDesc: swap.offeringDesc,
+                              receivingProficiency: swap.receivingProficiency,
+                              receivingDesc: swap.receivingDesc,
+                            })
+                          }
+                          className="flex-1 flex-row items-center justify-center gap-2 rounded-sm bg-primary py-3 shadow-sm active:opacity-80"
+                        >
+                          <Ionicons name="chatbubbles" size={14} color="#FFFFFF" />
+                          <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
+                            Open Chat
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Rate Partner button appears ONLY when fully completed */}
+                      {swap.status === 'COMPLETED' && (
+                        <TouchableOpacity
+                          onPress={() =>
+                            navigation.navigate('Rating', {
+                              tradeId: swap.id,
+                              partnerId: swap.partnerId,
+                              partnerName: swap.partnerName,
+                              partnerAvatar: swap.partnerAvatar,
+                              offering: swap.offering,
+                              receiving: swap.receiving,
+                            })
+                          }
+                          className={`flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid py-3 shadow-sm active:opacity-80 ${swap.hasRated ? 'border-amber-700 bg-amber-600' : 'border-amber-600 bg-amber-500'}`}
+                        >
+                          <Ionicons name="star" size={16} color="#FFFFFF" />
+                          <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
+                            {swap.hasRated ? 'Update Rating' : 'Rate Partner'}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Dual Confirmation Buttons */}
+                      {swap.status === 'ACCEPTED' && (
+                        <View className="flex-1 flex-row">
+                          {!swap.myCompleted ? (
+                            <TouchableOpacity
+                              onPress={() => handleStatusUpdate(swap.id, 'COMPLETED')}
+                              className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-emerald-700 bg-emerald-600 py-3 shadow-sm active:opacity-80"
+                            >
+                              <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
+                              <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
+                                {swap.partnerCompleted ? 'Confirm Finish' : 'Complete'}
+                              </Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <View className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-slate-400 bg-slate-300 py-3 dark:border-slate-800 dark:bg-slate-700">
+                              <Ionicons name="time" size={14} color="#64748B" />
+                              <Text className="font-body text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                Awaiting Partner
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      )}
+
+                      {swap.status === 'PENDING' && (
+                        <View className="flex-1 flex-row gap-2">
+                          {swap.canAccept ? (
+                            <>
+                              <TouchableOpacity
+                                onPress={() => handleStatusUpdate(swap.id, 'ACCEPTED')}
+                                className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-emerald-700 bg-emerald-600 py-3 shadow-sm active:opacity-80"
+                              >
+                                <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                                <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
+                                  Accept
+                                </Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => triggerConfirm(swap.id, 'REJECTED')}
+                                className="flex-row items-center justify-center rounded-sm border-2 border-solid border-red-600 bg-destructive px-4 py-3 shadow-sm active:opacity-80"
+                              >
+                                <Ionicons name="close" size={16} color="#FFFFFF" />
+                                <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
+                                  Decline
+                                </Text>
+                              </TouchableOpacity>
+                            </>
+                          ) : (
+                            <TouchableOpacity
+                              onPress={() => triggerConfirm(swap.id, 'CANCELLED')}
+                              className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-red-700 bg-red-600 py-3 active:border-red-400 active:bg-red-300 dark:border-red-800 dark:bg-red-700 dark:active:border-red-700 dark:active:bg-red-600"
+                            >
+                              <Ionicons name="ban" size={14} color="#FFFFFF" />
+                              <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
+                                Cancel Request
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </TouchableOpacity>
               );
@@ -636,11 +651,11 @@ const SwapsScreen = () => {
         onRequestClose={() => setSelectedSwap(null)}
       >
         {selectedSwap && (
-          <View className="flex-1 justify-end bg-black/50">
+          <View className="flex-1 justify-end bg-black/60">
             <View className="mt-24 w-full rounded-t-xl border-t-2 border-solid border-border bg-card p-6 shadow-xl">
               <View className="mb-6 flex-row items-center justify-between border-b border-border pb-4">
-                <Text className="font-technical text-lg uppercase tracking-wider text-foreground">
-                  Swap_Parameters
+                <Text className="font-technical text-lg uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+                  Swap Details
                 </Text>
                 <TouchableOpacity
                   onPress={() => setSelectedSwap(null)}
@@ -656,10 +671,10 @@ const SwapsScreen = () => {
                   className="h-16 w-16 rounded-sm border-2 border-solid border-border bg-muted"
                 />
                 <View>
-                  <Text className="font-technical text-[10px] uppercase text-muted-foreground">
-                    Initiating_Partner
+                  <Text className="font-body text-[10px] font-bold uppercase text-muted-foreground">
+                    Partner Details
                   </Text>
-                  <Text className="font-body text-xl font-medium text-foreground">
+                  <Text className="font-body text-xl font-bold text-foreground">
                     {selectedSwap.partnerName}
                   </Text>
                 </View>
@@ -668,23 +683,25 @@ const SwapsScreen = () => {
               <ScrollView className="mb-4 max-h-[50vh]" showsVerticalScrollIndicator={false}>
                 {/* You Provide Section */}
                 <View className="mb-4">
-                  <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-                    You Are Supplying
+                  <Text className="mb-2 font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    You Are Teaching
                   </Text>
                   <View className="rounded-sm border border-border bg-muted p-4">
                     <View className="flex-row items-center justify-between">
-                      <Text className="font-body text-base font-bold text-primary">
+                      <Text className="font-body text-base font-bold text-foreground">
                         {selectedSwap.offering}
                       </Text>
                       {selectedSwap.offeringProficiency && (
-                        <Text
-                          className={`rounded-sm border px-2 py-0.5 font-technical text-[10px] uppercase ${getBadgeColor(selectedSwap.offeringProficiency)}`}
+                        <View
+                          className={`rounded-sm border-2 px-2 py-0.5 ${getBadgeColor(selectedSwap.offeringProficiency)}`}
                         >
-                          {selectedSwap.offeringProficiency}
-                        </Text>
+                          <Text className="font-body text-[10px] font-bold uppercase text-white">
+                            {selectedSwap.offeringProficiency}
+                          </Text>
+                        </View>
                       )}
                     </View>
-                    <Text className="mt-1 font-body text-sm leading-relaxed text-muted-foreground">
+                    <Text className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">
                       {selectedSwap.offeringDesc || 'No specific parameters were provided.'}
                     </Text>
                   </View>
@@ -692,25 +709,27 @@ const SwapsScreen = () => {
 
                 {/* You Receive Section */}
                 <View className="mb-4">
-                  <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
+                  <Text className="mb-2 font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     {selectedSwap.partnerName
-                      ? `${selectedSwap.partnerName.split(' ')[0]} Is Supplying`
-                      : 'You Are Receiving'}
+                      ? `${selectedSwap.partnerName.split(' ')[0]} Is Teaching`
+                      : 'You Are Learning'}
                   </Text>
                   <View className="rounded-sm border border-border bg-muted p-4">
                     <View className="flex-row items-center justify-between">
-                      <Text className="font-body text-base font-bold text-accent">
+                      <Text className="font-body text-base font-bold text-foreground">
                         {selectedSwap.receiving}
                       </Text>
                       {selectedSwap.receivingProficiency && (
-                        <Text
-                          className={`rounded-sm border px-2 py-0.5 font-technical text-[10px] uppercase ${getBadgeColor(selectedSwap.receivingProficiency)}`}
+                        <View
+                          className={`rounded-sm border-2 px-2 py-0.5 ${getBadgeColor(selectedSwap.receivingProficiency)}`}
                         >
-                          {selectedSwap.receivingProficiency}
-                        </Text>
+                          <Text className="font-body text-[10px] font-bold uppercase text-white">
+                            {selectedSwap.receivingProficiency}
+                          </Text>
+                        </View>
                       )}
                     </View>
-                    <Text className="mt-1 font-body text-sm leading-relaxed text-muted-foreground">
+                    <Text className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">
                       {selectedSwap.receivingDesc || 'No specific parameters were provided.'}
                     </Text>
                   </View>
@@ -720,12 +739,12 @@ const SwapsScreen = () => {
               {/* Proposed Location */}
               {selectedSwap.proposedLocation && (
                 <View className="mb-4">
-                  <Text className="mb-1 font-technical text-[10px] uppercase text-muted-foreground">
-                    Proposed_Coordinates
+                  <Text className="mb-1 font-body text-[10px] font-bold uppercase text-muted-foreground">
+                    Location / Platform
                   </Text>
-                  <View className="flex-row items-center gap-2 rounded-sm border-2 border-solid border-border bg-background p-3">
-                    <Ionicons name="location" size={16} color="#4f46e5" />
-                    <Text className="font-body text-sm text-foreground">
+                  <View className="flex-row items-center gap-2 rounded-sm border-2 border-solid border-border bg-slate-50 p-3 dark:bg-slate-800/50">
+                    <Ionicons name="location" size={16} color={primaryIconColor} />
+                    <Text className="font-body text-sm font-bold text-foreground">
                       {selectedSwap.proposedLocation}
                     </Text>
                   </View>
@@ -735,10 +754,10 @@ const SwapsScreen = () => {
               {/* Message */}
               {selectedSwap.message && (
                 <View className="mb-8">
-                  <Text className="mb-1 font-technical text-[10px] uppercase text-muted-foreground">
-                    Incoming_Transmission
+                  <Text className="mb-1 font-body text-[10px] font-bold uppercase text-muted-foreground">
+                    Message
                   </Text>
-                  <View className="rounded-sm border-2 border-solid border-border bg-background p-4">
+                  <View className="rounded-sm border-2 border-solid border-border bg-slate-50 p-4 dark:bg-slate-800/50">
                     <Text className="font-body text-sm italic text-foreground">
                       {selectedSwap.message}
                     </Text>
@@ -752,17 +771,19 @@ const SwapsScreen = () => {
                   <View className="flex-row gap-3">
                     <TouchableOpacity
                       onPress={() => handleStatusUpdate(selectedSwap.id, 'ACCEPTED')}
-                      className="flex-1 items-center justify-center rounded-sm bg-primary py-4 active:opacity-80"
+                      className="flex-1 flex-row items-center justify-center gap-2 rounded-sm bg-emerald-600 py-4 shadow-sm active:opacity-80"
                     >
-                      <Text className="font-technical text-sm uppercase tracking-wider text-white">
-                        Authorize
+                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                      <Text className="font-body text-sm font-bold uppercase tracking-wider text-white">
+                        Accept
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => triggerConfirm(selectedSwap.id, 'REJECTED')}
-                      className="items-center justify-center rounded-sm border-2 border-solid border-red-500 bg-transparent px-5 py-4 active:opacity-70"
+                      className="flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-red-600 bg-red-500 px-6 py-4 active:opacity-80"
                     >
-                      <Text className="font-technical text-sm uppercase tracking-wider text-red-500">
+                      <Ionicons name="close" size={16} color="#FFFFFF" />
+                      <Text className="font-body text-sm font-bold uppercase tracking-wider text-white">
                         Decline
                       </Text>
                     </TouchableOpacity>
@@ -771,9 +792,10 @@ const SwapsScreen = () => {
                 {selectedSwap.status === 'PENDING' && !selectedSwap.canAccept && (
                   <TouchableOpacity
                     onPress={() => triggerConfirm(selectedSwap.id, 'CANCELLED')}
-                    className="w-full items-center justify-center rounded-sm border-2 border-solid border-muted-foreground bg-transparent py-4 active:opacity-70"
+                    className="w-full flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-red-700 bg-red-600 py-3 active:border-red-400 active:bg-red-300 dark:border-red-800 dark:bg-red-700 dark:active:border-red-700 dark:active:bg-red-600"
                   >
-                    <Text className="font-technical text-sm uppercase tracking-wider text-muted-foreground">
+                    <Ionicons name="ban" size={14} color="#FFFFFF" />
+                    <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
                       Cancel Request
                     </Text>
                   </TouchableOpacity>
@@ -800,10 +822,11 @@ const SwapsScreen = () => {
                         receivingDesc: snapSelected.receivingDesc,
                       });
                     }}
-                    className="w-full items-center justify-center rounded-sm bg-primary py-4 active:opacity-80"
+                    className="w-full flex-row items-center justify-center gap-2 rounded-sm bg-primary py-4 shadow-sm active:opacity-80"
                   >
-                    <Text className="font-technical text-sm uppercase tracking-wider text-white">
-                      Message
+                    <Ionicons name="chatbubble" size={16} color="#FFFFFF" />
+                    <Text className="font-body text-sm font-bold uppercase tracking-wider text-white">
+                      Message Partner
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -816,18 +839,18 @@ const SwapsScreen = () => {
                       {!selectedSwap.myCompleted ? (
                         <TouchableOpacity
                           onPress={() => handleStatusUpdate(selectedSwap.id, 'COMPLETED')}
-                          className="flex-1 items-center justify-center rounded-sm border-2 border-solid border-green-600 bg-transparent py-4 active:opacity-70"
+                          className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-emerald-700 bg-emerald-600 py-3 shadow-sm active:opacity-80"
                         >
-                          <Text className="font-technical text-sm uppercase tracking-wider text-green-600">
-                            {selectedSwap.partnerCompleted
-                              ? 'Confirm Completion'
-                              : 'Mark as Complete'}
+                          <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
+                          <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
+                            {selectedSwap.partnerCompleted ? 'Confirm Finish' : 'Mark as Complete'}
                           </Text>
                         </TouchableOpacity>
                       ) : (
-                        <View className="flex-1 items-center justify-center rounded-sm border-2 border-solid border-muted-foreground bg-muted py-4 opacity-60">
-                          <Text className="text-center font-technical text-sm uppercase tracking-wider text-muted-foreground">
-                            Awaiting Partner Confirmation
+                        <View className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-slate-400 bg-slate-300 py-3 dark:border-slate-800 dark:bg-slate-700">
+                          <Ionicons name="time" size={14} color="#64748B" />
+                          <Text className="font-body text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                            Awaiting Partner
                           </Text>
                         </View>
                       )}
@@ -840,11 +863,11 @@ const SwapsScreen = () => {
                           setCancelModalConfig({ visible: true, swapId: selectedSwap.id });
                           setSelectedSwap(null);
                         }}
-                        className="w-full flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-red-500/50 bg-transparent py-3 active:opacity-70"
+                        className="border-solidborder-red-700 w-full flex-row items-center justify-center gap-2 rounded-sm border-2 bg-red-600 py-3 active:border-red-400 active:bg-red-300 dark:border-red-800 dark:bg-red-700 dark:active:border-red-700 dark:active:bg-red-600"
                       >
-                        <Ionicons name="warning-outline" size={16} color="#ef4444" />
-                        <Text className="font-technical text-xs uppercase tracking-wider  text-red-500">
-                          Abort Swap
+                        <Ionicons name="warning-outline" size={16} color="#FFFFFF" />
+                        <Text className="font-body text-xs font-bold uppercase tracking-wider  text-white">
+                          Cancel Swap
                         </Text>
                       </TouchableOpacity>
                     )}
@@ -863,12 +886,11 @@ const SwapsScreen = () => {
                         partnerAvatar: selectedSwap.partnerAvatar,
                       });
                     }}
-                    className={`w-full items-center justify-center rounded-sm border-2 border-solid py-3 active:opacity-70 ${selectedSwap.hasRated ? 'border-[#EAB308] bg-transparent' : 'border-[#EAB308] bg-[#EAB308]'}`}
+                    className={`w-full flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid py-3 shadow-sm active:opacity-80 ${selectedSwap.hasRated ? 'border-amber-700 bg-amber-600' : 'border-amber-600 bg-amber-500'}`}
                   >
-                    <Text
-                      className={`font-technical text-xs uppercase tracking-wider ${selectedSwap.hasRated ? 'text-[#EAB308]' : 'text-[#0F172A]'} `}
-                    >
-                      {selectedSwap.hasRated ? 'Edit Rating' : 'Rate Partner'}
+                    <Ionicons name="star" size={16} color="#FFFFFF" />
+                    <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
+                      {selectedSwap.hasRated ? 'Update Rating' : 'Rate Partner'}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -880,11 +902,11 @@ const SwapsScreen = () => {
 
       <ConfirmModal
         visible={confirmConfig.visible}
-        title={confirmConfig.actionType === 'CANCELLED' ? 'Cancel Proposal' : 'Decline Swap'}
+        title={confirmConfig.actionType === 'CANCELLED' ? 'Cancel Request' : 'Decline Swap'}
         message={
           confirmConfig.actionType === 'CANCELLED'
-            ? 'Are you sure you want to retract your swap proposal? This action cannot be undone.'
-            : 'Are you sure you want to decline this swap proposal? This action cannot be undone.'
+            ? 'Are you sure you want to retract your swap request? This action cannot be undone.'
+            : 'Are you sure you want to decline this swap request? This action cannot be undone.'
         }
         confirmText={confirmConfig.actionType === 'CANCELLED' ? 'Cancel Swap' : 'Decline Swap'}
         cancelText="Nevermind"

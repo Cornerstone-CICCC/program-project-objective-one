@@ -88,3 +88,23 @@ export const deleteRating = async (ratingId: string) => {
     throw err;
   }
 };
+
+export const getUserReviews = async (userId: string) => {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${BASE_URL}/ratings/user/${userId}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Failed to fetch user reviews.');
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error('Get user reviews error:', err);
+    throw err;
+  }
+};

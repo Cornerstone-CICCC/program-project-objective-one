@@ -31,6 +31,10 @@ module.exports = {
           DEFAULT: 'var(--accent)',
           foreground: 'var(--accent-foreground)',
         },
+        destructive: {
+          DEFAULT: 'var(--destructive)',
+          foreground: 'var(--destructive-foreground)',
+        },
         sidebar: {
           DEFAULT: 'var(--sidebar)',
           border: 'var(--sidebar-border)',

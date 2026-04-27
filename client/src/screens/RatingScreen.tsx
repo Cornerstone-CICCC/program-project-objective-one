@@ -9,6 +9,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useColorScheme,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,9 +23,16 @@ const RatingScreen = () => {
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
 
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
+
   const tradeId = route.params?.tradeId;
   const partnerName = route.params?.partnerName || 'Trade Partner';
   const partnerAvatar = route.params?.partnerAvatar;
+
+  const offeredSkill = route.params?.offering || 'Skill';
+  const receivedSkill = route.params?.receiving || 'Skill';
 
   const [ratingId, setRatingId] = useState<string | null>(null);
   const [initialRating, setInitialRating] = useState(0);
@@ -56,6 +64,9 @@ const RatingScreen = () => {
 
   const isReviewOverLimit = review.length > 500;
   const hasChanges = rating !== initialRating || review.trim() !== initialReview.trim();
+
+  const isFormValid = rating > 0 && !isReviewOverLimit;
+  const canSubmit = alreadyReviewed ? hasChanges && isFormValid : isFormValid;
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -93,7 +104,7 @@ const RatingScreen = () => {
         });
         setAlertConfig({
           visible: true,
-          title: 'Evaluation_Updated',
+          title: 'Review Updated',
           message: 'Your revised evaluation has been saved.',
           isSuccess: true,
           variant: 'success',
@@ -107,7 +118,7 @@ const RatingScreen = () => {
 
         setAlertConfig({
           visible: true,
-          title: 'Evaluation_Recorded',
+          title: 'Review Recorded',
           message: 'Thank you for helping maintain community integrity.',
           isSuccess: true,
           variant: 'success',
@@ -116,7 +127,7 @@ const RatingScreen = () => {
     } catch (err: any) {
       setAlertConfig({
         visible: true,
-        title: 'System_Error',
+        title: 'System Error',
         message: err.message || 'Failed to process evaluation.',
         isSuccess: false,
         variant: 'error',
@@ -135,7 +146,7 @@ const RatingScreen = () => {
       await deleteRating(ratingId);
       setAlertConfig({
         visible: true,
-        title: 'Evaluation_Purged',
+        title: 'Review Deleted',
         message: 'Your evaluation has been permanently removed.',
         isSuccess: true,
         variant: 'success',
@@ -143,7 +154,7 @@ const RatingScreen = () => {
     } catch (err: any) {
       setAlertConfig({
         visible: true,
-        title: 'System_Error',
+        title: 'System Error',
         message: err.message || 'Failed to delete evaluation.',
         isSuccess: false,
         variant: 'error',
@@ -155,9 +166,9 @@ const RatingScreen = () => {
   if (isChecking) {
     return (
       <View className="flex-1 items-center justify-center bg-background px-6">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={primaryIconColor} />
         <Text className="mt-4 text-center font-technical text-sm uppercase tracking-wider text-muted-foreground">
-          Checking_Records...
+          Checking Records...
         </Text>
       </View>
     );
@@ -173,18 +184,24 @@ const RatingScreen = () => {
         className="border-b-2 border-solid border-border bg-card px-6 pb-6"
         style={{ paddingTop: Math.max(insets.top, 24) }}
       >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          className="mb-4 self-start rounded-sm p-1 active:bg-muted"
-        >
-          <Ionicons name="close" size={28} color="#64748B" />
-        </TouchableOpacity>
-        <Text className="font-technical text-2xl uppercase tracking-wider text-foreground">
-          Trade_Evaluation
-        </Text>
-        <Text className="mt-2 font-body text-sm text-muted-foreground">
-          Log your experience to maintain community integrity.
-        </Text>
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="rounded-sm p-1 active:bg-muted"
+            disabled={isSubmitting || isDeleting}
+          >
+            <Ionicons name="close" size={28} color="#64748B" />
+          </TouchableOpacity>
+
+          <View>
+            <Text className="font-technical text-xl uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+              Rate Your Swap
+            </Text>
+            <Text className="font-body text-xs text-muted-foreground">
+              Log your experience to maintain community integrity.
+            </Text>
+          </View>
+        </View>
       </View>
 
       <ScrollView
@@ -193,30 +210,40 @@ const RatingScreen = () => {
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         {/* Target Card */}
-        <View className="mb-8 flex-row items-center gap-4 rounded-sm border-2 border-solid border-border bg-muted p-4">
-          {partnerAvatar ? (
-            <Image
-              source={{ uri: partnerAvatar || 'https://placehold.co/150' }}
-              className="h-14 w-14 rounded-sm border-2 border-solid border-muted-foreground bg-card"
-              resizeMode="contain"
-            />
-          ) : (
-            <View className="h-14 w-14 items-center justify-center rounded-sm border-2 border-solid border-muted-foreground bg-card">
-              <Ionicons name="person" size={24} color="#64748B" />
+        <View className="mb-6 overflow-hidden rounded-sm border-2 border-solid border-border bg-card shadow-sm">
+          <View className="flex-row items-center gap-4 p-4">
+            <View className="h-14 w-14 overflow-hidden rounded-sm border-2 border-border bg-muted">
+              <Image
+                source={{ uri: partnerAvatar || 'https://placehold.co/150' }}
+                className="h-full w-full"
+                resizeMode="contain"
+              />
             </View>
-          )}
-          <View>
-            <Text className="mb-1 font-technical text-[10px] uppercase tracking-wider text-muted-foreground">
-              Evaluating_Partner
+            <View className="flex-1">
+              <Text className="mb-1 font-body text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Swap Partner
+              </Text>
+              <Text className="font-body text-lg font-bold text-foreground">{partnerName}</Text>
+            </View>
+          </View>
+
+          <View className="flex-row items-center gap-2 border-t-2 border-border bg-slate-50 px-4 py-3 dark:bg-slate-800/50">
+            <Ionicons name="sync" size={14} color="#64748B" />
+            <Text
+              className="font-technical text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+              numberOfLines={1}
+            >
+              <Text className="text-foreground">{offeredSkill}</Text>
+              {'  '}↔{'  '}
+              <Text className="text-foreground">{receivedSkill}</Text>
             </Text>
-            <Text className="font-body text-lg font-medium text-foreground">{partnerName}</Text>
           </View>
         </View>
 
         {alreadyReviewed && (
           <View className="mb-6 flex-row items-center gap-2 rounded-sm border-2 border-solid border-primary bg-muted p-4">
-            <Ionicons name="information-circle" size={24} color="#4F46E5" />
-            <Text className="flex-1 font-body text-sm text-foreground">
+            <Ionicons name="information-circle" size={24} color={primaryIconColor} />
+            <Text className="flex-1 font-body text-sm font-bold text-foreground">
               You are currently editing your existing evaluation.
             </Text>
           </View>
@@ -224,8 +251,8 @@ const RatingScreen = () => {
 
         {/* Star Rating System */}
         <View className="mb-8 items-center">
-          <Text className="mb-4 font-technical text-xs uppercase tracking-wider text-foreground">
-            Overall_Rating
+          <Text className="mb-4 font-body text-sm font-bold uppercase tracking-wider text-foreground">
+            Overall Rating
           </Text>
           <View className="flex-row gap-2">
             {[1, 2, 3, 4, 5].map((star) => (
@@ -247,8 +274,8 @@ const RatingScreen = () => {
 
         {/* Text Review */}
         <View className="mb-8">
-          <Text className="mb-3 font-technical text-xs uppercase tracking-wider text-foreground">
-            Detailed_Report (Optional)
+          <Text className="mb-3 font-body text-sm font-bold uppercase tracking-wider text-foreground">
+            Review Details <Text className="text-muted-foreground">(Optional)</Text>
           </Text>
           <TextInput
             value={review}
@@ -259,10 +286,10 @@ const RatingScreen = () => {
             numberOfLines={6}
             textAlignVertical="top"
             editable={!isSubmitting && !isDeleting}
-            className={`min-h-[120px] w-full rounded-sm border-2 border-solid bg-card p-4 font-body text-foreground ${isReviewOverLimit ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-primary'}`}
+            className={`min-h-[120px] w-full rounded-sm border-2 border-solid bg-card p-4 font-body text-foreground focus:outline-none ${isReviewOverLimit ? 'border-destructive focus:border-destructive' : 'border-border focus:border-primary'}`}
           />
           <Text
-            className={`mt-1 text-right font-technical text-[10px] uppercase tracking-wider ${isReviewOverLimit ? 'font-bold text-red-500' : 'text-muted-foreground'}`}
+            className={`mt-1 text-right font-technical text-[10px] uppercase tracking-wider ${isReviewOverLimit ? 'text-destructive font-bold' : 'text-muted-foreground'}`}
           >
             {review.length} / 500
           </Text>
@@ -272,47 +299,33 @@ const RatingScreen = () => {
       {/* Fixed Footer */}
 
       <View
-        className="flex-row gap-4 border-t-2 border-solid border-border bg-card p-4"
+        className="flex-row gap-3 border-t-2 border-solid border-border bg-card p-4 shadow-lg"
         style={{ paddingBottom: Math.max(insets.bottom, 16) }}
       >
         {alreadyReviewed && (
           <TouchableOpacity
             onPress={() => setConfirmDeleteVisible(true)}
             disabled={isSubmitting || isDeleting}
-            className="items-center justify-center rounded-sm border-2 border-solid border-red-500 bg-transparent px-4 active:opacity-70"
+            className="border-destructive items-center justify-center rounded-sm border-2 border-solid bg-red-50 px-4 active:bg-red-100 dark:bg-red-900/20 dark:active:bg-red-900/40"
           >
             {isDeleting ? (
-              <ActivityIndicator size="small" color="#ef4444" />
+              <ActivityIndicator size="small" color="#EF4444" />
             ) : (
-              <Ionicons name="trash" size={24} color="#ef4444" />
+              <Ionicons name="trash" size={24} color="#EF4444" />
             )}
           </TouchableOpacity>
         )}
         <TouchableOpacity
           onPress={handleSubmit}
-          disabled={
-            rating === 0 ||
-            isSubmitting ||
-            isDeleting ||
-            (alreadyReviewed && !hasChanges) ||
-            isReviewOverLimit
-          }
-          className={`flex-1 flex-row items-center justify-center rounded-sm border-2 border-solid py-4 ${(rating > 0 && !alreadyReviewed && !isReviewOverLimit) || (alreadyReviewed && hasChanges && !isReviewOverLimit) ? 'border-primary bg-primary active:opacity-80' : 'border-muted-foreground bg-muted opacity-50'}`}
+          disabled={!canSubmit || isSubmitting || isDeleting}
+          activeOpacity={0.8}
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-sm py-4 shadow-sm ${canSubmit && !isSubmitting && !isDeleting ? 'bg-primary' : 'bg-slate-400 opacity-70 dark:bg-slate-600'}`}
         >
           {isSubmitting ? (
-            <ActivityIndicator size="small" color="#ffffff" />
+            <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text
-              className="font-technical text-sm uppercase tracking-wider"
-              style={{
-                color:
-                  (rating > 0 && !alreadyReviewed && !isReviewOverLimit) ||
-                  (alreadyReviewed && hasChanges && !isReviewOverLimit)
-                    ? '#FFFFFF'
-                    : '#64748B',
-              }}
-            >
-              {alreadyReviewed ? 'Update_Evaluation' : 'Submit_Evaluation'}
+            <Text className="font-body font-bold text-white">
+              {alreadyReviewed ? 'Update Review' : 'Submit Review'}
             </Text>
           )}
         </TouchableOpacity>
@@ -320,7 +333,7 @@ const RatingScreen = () => {
 
       <ConfirmModal
         visible={confirmDeleteVisible}
-        title="Purge Evaluation"
+        title="Delete Review"
         message="Are you sure you want to permanently delete this rating? This action cannot be undone."
         confirmText="Delete"
         cancelText="Cancel"

@@ -5,11 +5,14 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  LayoutAnimation,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
+  UIManager,
   useColorScheme,
   View,
 } from 'react-native';
@@ -25,6 +28,10 @@ import AlertModal from '../components/AlertModal';
 import { updateUserLocation } from '../api/location';
 import SelectModal from '../components/SelectModal';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export type Proficiency = 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
 
 export interface IUserSkillUI {
@@ -39,9 +46,10 @@ export interface IUserSkillUI {
 const ProfileEditScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
 
-  const actionColor = colorScheme === 'dark' ? '#60A5FA' : '#1E40AF';
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const { user, setAuth } = useAuthStore();
 
@@ -73,6 +81,7 @@ const ProfileEditScreen = () => {
 
   const [activeModal, setActiveModal] = useState<'offer' | 'seek' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [modalExpandedCategory, setModalExpandedCategory] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingSkill, setEditingSkill] = useState<{
@@ -97,6 +106,15 @@ const ProfileEditScreen = () => {
 
   const isBioOverLimit = bio.length > 300;
   const isDescOverLimit = (editingSkill?.skill.description?.length || 0) > 500;
+
+  const isFormValid =
+    username.trim() !== '' &&
+    city.trim() !== '' &&
+    province.trim() !== '' &&
+    country.trim() !== '' &&
+    !isBioOverLimit &&
+    !isUploading &&
+    !isSaving;
 
   useEffect(() => {
     if (country) {
@@ -157,6 +175,16 @@ const ProfileEditScreen = () => {
     fetchData();
   }, []);
 
+  const groupedSkills = dbSkills.reduce(
+    (acc, skill) => {
+      const cat = skill.category || 'General';
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(skill);
+      return acc;
+    },
+    {} as Record<string, ISkill[]>,
+  );
+
   const countryOptions = useMemo(() => {
     return Country.getAllCountries().map((c) => ({
       label: c.name,
@@ -189,7 +217,7 @@ const ProfileEditScreen = () => {
       if (status !== 'granted') {
         setAlertConfig({
           visible: true,
-          title: 'Permission_Denied',
+          title: 'Permission Denied',
           message: 'Please allow location access, or select it manually.',
           isSuccess: false,
           variant: 'error',
@@ -225,7 +253,7 @@ const ProfileEditScreen = () => {
       console.error(err);
       setAlertConfig({
         visible: true,
-        title: 'Location_Error',
+        title: 'Location Error',
         message: 'Could not detect location. Please select it manually.',
         isSuccess: false,
         variant: 'error',
@@ -255,7 +283,7 @@ const ProfileEditScreen = () => {
       console.error('Upload Error:', err);
       setAlertConfig({
         visible: true,
-        title: 'System_Error',
+        title: 'System Error',
         message: 'An unexpected error occurred during upload.',
         isSuccess: false,
         variant: 'error',
@@ -279,18 +307,7 @@ const ProfileEditScreen = () => {
   };
 
   const handleSave = async () => {
-    if (isBioOverLimit) return;
-
-    if (!city.trim() || !province.trim() || !country.trim()) {
-      setAlertConfig({
-        visible: true,
-        title: 'Data_Missing',
-        message: 'Please ensure Country, Province, and City are selected.',
-        isSuccess: false,
-        variant: 'error',
-      });
-      return;
-    }
+    if (!isFormValid) return;
 
     setIsSaving(true);
 
@@ -328,15 +345,15 @@ const ProfileEditScreen = () => {
         setAuth(result.user);
         setAlertConfig({
           visible: true,
-          title: 'Profile_Updated',
-          message: 'Your identity and location parameters have been successfully saved.',
+          title: 'Profile Updated',
+          message: 'Your profile and location settings have been successfully saved.',
           isSuccess: true,
           variant: 'success',
         });
       } else {
         setAlertConfig({
           visible: true,
-          title: 'Update_Failed',
+          title: 'Update Failed',
           message: 'Please try again.',
           isSuccess: false,
           variant: 'error',
@@ -346,7 +363,7 @@ const ProfileEditScreen = () => {
       console.error('Profile update error:', err);
       setAlertConfig({
         visible: true,
-        title: 'System_Error',
+        title: 'System Error',
         message: 'An unexpected error occurred.',
         isSuccess: false,
         variant: 'error',
@@ -441,7 +458,7 @@ const ProfileEditScreen = () => {
       setAlertConfig({
         visible: true,
         title: 'Error',
-        message: 'Could not update skill parameters.',
+        message: 'Could not update skill details.',
         isSuccess: false,
         variant: 'error',
       });
@@ -469,7 +486,7 @@ const ProfileEditScreen = () => {
           >
             <Text className="mr-1 font-technical text-xs text-foreground">{skillObj.name}</Text>
             <View
-              className={`h-2 w-2 rounded-full ${skillObj.proficiency === 'Expert' ? 'bg-purple-500' : skillObj.proficiency === 'Advanced' ? 'bg-green-500' : skillObj.proficiency === 'Intermediate' ? 'bg-yellow-500' : 'bg-blue-500'}`}
+              className={`h-2 w-2 rounded-full ${skillObj.proficiency === 'Expert' ? 'bg-purple-500' : skillObj.proficiency === 'Advanced' ? 'bg-emerald-500' : skillObj.proficiency === 'Intermediate' ? 'bg-amber-500' : 'bg-blue-500'}`}
             />
           </TouchableOpacity>
 
@@ -477,7 +494,7 @@ const ProfileEditScreen = () => {
             onPress={() => handleRemoveSkill(skillObj, type)}
             className="border-l border-border bg-card px-2 py-1.5 active:bg-red-500/10"
           >
-            <Ionicons name="close" size={14} color="#ef4444" />
+            <Ionicons name="close" size={14} color="#EF4444" />
           </TouchableOpacity>
         </View>
       ))}
@@ -486,7 +503,9 @@ const ProfileEditScreen = () => {
         className="flex-row items-center rounded-sm border-2 border-dashed border-border bg-transparent px-3 py-1.5 active:bg-muted"
       >
         <Ionicons name="add" size={14} color="#64748B" />
-        <Text className="ml-1 font-technical text-xs uppercase text-muted-foreground">Add</Text>
+        <Text className="ml-1 font-technical text-xs font-bold uppercase text-muted-foreground">
+          Add
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -507,11 +526,11 @@ const ProfileEditScreen = () => {
             <Ionicons name="arrow-back" size={24} color="#64748B" />
           </TouchableOpacity>
           <View>
-            <Text className="font-technical text-lg uppercase tracking-wider text-primary">
-              Public_Identity_Sys
+            <Text className="font-technical text-lg uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+              Edit Profile
             </Text>
-            <Text className="mt-1 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-              Profile_Configuration_Interface
+            <Text className="mt-1 font-body text-xs text-muted-foreground">
+              Manage your identity and location
             </Text>
           </View>
         </View>
@@ -520,58 +539,56 @@ const ProfileEditScreen = () => {
       <ScrollView
         className="flex-1 px-6"
         contentContainerStyle={{ paddingVertical: 24, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
       >
         {/* Avatar */}
         <View className="mb-8 items-center">
           <View className="relative">
-            <View className="h-32 w-32 items-center justify-center overflow-hidden rounded-sm border-2 border-solid border-primary bg-muted">
+            <View className="h-32 w-32 items-center justify-center overflow-hidden rounded-sm border-2 border-solid border-muted-foreground bg-muted shadow-md">
               {isUploading ? (
                 <ActivityIndicator color="#1E40AF" size="large" />
               ) : (
-                <Image source={{ uri: avatar }} className="h-full w-full" resizeMode="cover" />
+                <Image source={{ uri: avatar }} className="h-full w-full" resizeMode="contain" />
               )}
             </View>
             <TouchableOpacity
               onPress={pickImage}
               disabled={isUploading || isSaving}
-              className={`absolute -bottom-2 -right-2 h-10 w-10 items-center justify-center rounded-sm border-2 border-background bg-accent ${isUploading || isSaving ? 'opacity-50' : 'active:opacity-80'}`}
+              className={`absolute bottom-0 right-0 h-10 w-10 items-center justify-center rounded-sm border-2 border-muted-foreground bg-primary shadow-sm ${isUploading || isSaving ? 'opacity-50' : 'active:opacity-80'}`}
             >
-              <Ionicons name="camera" size={20} color="#FFFFFF" />
+              <Ionicons name="camera" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
-          <Text className="mt-4 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-            Avatar_Update
-          </Text>
         </View>
 
         {/* Username & Bio */}
         <View className="mb-8 space-y-4">
-          <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-accent">
-            Swap_Profile_Data
+          <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            Profile Information
           </Text>
 
           {/* Username */}
           <View className="mb-4 rounded-sm border-2 border-solid border-border bg-card p-4">
-            <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-              Display_Name
+            <Text className="mb-2 font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Display Name
             </Text>
             <TextInput
               value={username}
               onChangeText={setUsername}
               editable={!isSaving}
-              className="w-full rounded-sm border-2 border-solid border-border bg-background px-3 py-2 font-body text-foreground focus:border-primary"
+              className="w-full rounded-sm border-2 border-solid border-border bg-background px-3 py-2 font-body text-foreground focus:border-primary focus:outline-none"
               placeholderTextColor="#64748B"
             />
           </View>
 
           {/* Bio */}
           <View
-            className={`rounded-sm border-2 border-solid bg-card p-4 transition-colors ${isBioOverLimit ? 'border-red-500' : 'border-border'}`}
+            className={`rounded-sm border-2 border-solid bg-card p-4 transition-colors ${isBioOverLimit ? 'border-destructive' : 'border-border'}`}
           >
             <Text
-              className={`mb-2 font-technical text-xs uppercase tracking-wider ${isBioOverLimit ? 'text-red-500' : 'text-muted-foreground'}`}
+              className={`mb-2 font-body text-xs font-bold uppercase tracking-wider ${isBioOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}
             >
-              Bio_Description
+              About Me
             </Text>
             <TextInput
               value={bio}
@@ -580,11 +597,11 @@ const ProfileEditScreen = () => {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
-              className={`min-h-[100px] w-full rounded-sm border-2 border-solid bg-background px-3 py-2 font-body text-foreground ${isBioOverLimit ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-primary'}`}
+              className={`min-h-[100px] w-full rounded-sm border-2 border-solid bg-background px-3 py-2 font-body text-foreground focus:outline-none ${isBioOverLimit ? 'border-destructive focus:border-destructive' : 'border-border focus:border-primary'}`}
               placeholderTextColor="#64748B"
             />
             <Text
-              className={`mt-2 text-right font-technical text-[10px] uppercase tracking-wider ${isBioOverLimit ? 'font-bold text-red-500' : 'text-muted-foreground'}`}
+              className={`mt-2 text-right font-technical text-[10px] uppercase tracking-wider ${isBioOverLimit ? 'text-destructive font-bold' : 'text-muted-foreground'}`}
             >
               {bio.length}/300 Characters
             </Text>
@@ -593,14 +610,14 @@ const ProfileEditScreen = () => {
 
         {/* Location Config UI */}
         <View className="mb-8 space-y-4">
-          <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-accent">
-            Location_Config
+          <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            Location Settings
           </Text>
 
           <View className="rounded-sm border-2 border-solid border-border bg-card p-4">
             <View className="mb-4 flex-row items-center justify-between">
-              <Text className="font-technical text-xs uppercase tracking-wider text-muted-foreground">
-                Geographic_Data
+              <Text className="font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Your Location
               </Text>
               <TouchableOpacity
                 onPress={handleAutoLocate}
@@ -608,14 +625,11 @@ const ProfileEditScreen = () => {
                 className="flex-row items-center gap-2 rounded bg-muted px-3 py-1.5 active:opacity-80"
               >
                 {isLocating ? (
-                  <ActivityIndicator size="small" color={actionColor} />
+                  <ActivityIndicator size="small" color={primaryIconColor} />
                 ) : (
                   <>
-                    <Ionicons name="navigate-outline" size={14} color={actionColor} />
-                    <Text
-                      className="font-technical text-[10px] font-bold uppercase"
-                      style={{ color: actionColor }}
-                    >
+                    <Ionicons name="navigate-outline" size={14} color={primaryIconColor} />
+                    <Text className="font-technical text-[10px] font-bold uppercase text-primary dark:text-[#A5B4FC]">
                       Auto-Locate
                     </Text>
                   </>
@@ -671,14 +685,14 @@ const ProfileEditScreen = () => {
 
         {/* Skill Matrix */}
         <View className="mb-8 space-y-4">
-          <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-accent">
-            Skill_Matrix_Config
+          <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            Manage Skills
           </Text>
 
           {/* Offering */}
           <View className="mb-4 rounded-sm border-2 border-solid border-border bg-card p-4">
-            <Text className="font-technical text-xs uppercase  tracking-wider text-muted-foreground">
-              Skills_Offering
+            <Text className="font-body text-xs font-bold uppercase  tracking-wider text-muted-foreground">
+              Skills I Can Teach
             </Text>
             <Text className="mt-1 font-body text-xs text-muted-foreground">
               Tap a skill to edit proficiency and details.
@@ -688,8 +702,8 @@ const ProfileEditScreen = () => {
 
           {/* Seeking */}
           <View className="rounded-sm border-2 border-solid border-border bg-card p-4">
-            <Text className="font-technical text-xs uppercase tracking-wider text-muted-foreground">
-              Skills_Seeking
+            <Text className="font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Skills I Want To Learn
             </Text>
             <Text className="mt-1 font-body text-xs text-muted-foreground">
               Tap a skill to edit proficiency and details.
@@ -705,28 +719,26 @@ const ProfileEditScreen = () => {
         style={{ paddingBottom: Math.max(insets.bottom, 16) }}
       >
         <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          disabled={isSaving}
+          className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-border bg-transparent py-3 active:bg-muted"
+        >
+          <Ionicons name="close" size={20} color="#64748B" />
+          <Text className="font-body font-bold text-foreground">Cancel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           onPress={handleSave}
           disabled={isBioOverLimit || isUploading || isSaving}
-          className={`flex-1 flex-row items-center justify-center gap-2 rounded-sm bg-primary py-3 ${isBioOverLimit || isUploading || isSaving ? 'opacity-50' : 'active:opacity-80'}`}
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-sm py-3 shadow-sm transition-colors ${!isFormValid ? 'bg-slate-400 opacity-70' : 'bg-primary active:opacity-90'}`}
         >
           {isSaving ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <Ionicons name="save" size={20} color="#FFFFFF" />
           )}
-          <Text className="font-technical text-sm uppercase tracking-wider text-primary-foreground">
-            {isSaving ? 'Deploying...' : 'Deploy_Changes'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          disabled={isSaving}
-          className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-border bg-transparent py-3 active:bg-muted"
-        >
-          <Ionicons name="close" size={20} color="#64748B" />
-          <Text className="font-technical text-sm uppercase tracking-wider text-foreground">
-            Cancel
+          <Text className="font-body font-bold text-white">
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -788,69 +800,159 @@ const ProfileEditScreen = () => {
         onRequestClose={() => {
           setActiveModal(null);
           setSearchQuery('');
+          setModalExpandedCategory(null);
         }}
       >
-        <View className="flex-1 bg-background px-6 pt-12">
-          <View className="mb-6 flex-row items-center justify-between">
-            <Text className="font-technical text-lg uppercase tracking-wider text-foreground">
-              {activeModal === 'offer' ? 'Select_Offering_Skills' : 'Select_Seeking_Skills'}
-            </Text>
+        <View className="flex-1 bg-background pt-12">
+          <View className="flex-1 px-6">
+            <View className="mb-6 flex-row items-center justify-between">
+              <Text className="font-technical text-lg font-bold uppercase tracking-wider text-foreground">
+                {activeModal === 'offer' ? 'Select Skills to Teach' : 'Select Skills to Learn'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setActiveModal(null);
+                  setSearchQuery('');
+                }}
+                className="p-2"
+              >
+                <Ionicons name="close" size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input */}
+            <View className="relative mb-4">
+              <Ionicons
+                name="search"
+                size={20}
+                color="#64748B"
+                className="absolute left-3 top-3 z-10"
+              />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search skills..."
+                placeholderTextColor="#64748B"
+                className="w-full rounded-sm border-2 border-solid border-border bg-card py-3 pl-10 pr-4 font-body text-foreground focus:border-primary focus:outline-none"
+              />
+            </View>
+
+            {/* Result List */}
+            {isLoadingSkills ? (
+              <ActivityIndicator color={primaryIconColor} size="large" className="mt-10" />
+            ) : searchQuery ? (
+              <FlatList
+                data={filteredSkills}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => {
+                  const targetArray = activeModal === 'offer' ? offering : seeking;
+                  const isSelected = !!targetArray.find((s) => s.name === item.name);
+                  return (
+                    <TouchableOpacity
+                      onPress={() => activeModal && toggleSearchSkill(item.name, activeModal)}
+                      className={`mb-2 flex-row items-center justify-between rounded-sm border-2 border-solid p-4 ${isSelected ? 'border-primary bg-primary' : 'border-border bg-card'}`}
+                    >
+                      <Text
+                        className={`font-body text-sm font-medium ${isSelected ? 'text-white' : 'text-foreground'}`}
+                      >
+                        {item.name}
+                      </Text>
+                      {isSelected && <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />}
+                    </TouchableOpacity>
+                  );
+                }}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 40 }}
+              />
+            ) : (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 40 }}
+              >
+                <View className="flex-col gap-3">
+                  {Object.entries(groupedSkills).map(([category, skills]) => {
+                    const isExpanded = modalExpandedCategory === category;
+                    const targetArray = activeModal === 'offer' ? offering : seeking;
+                    const selectedCount = skills.filter((s) =>
+                      targetArray.find((ts) => ts.name === s.name),
+                    ).length;
+
+                    return (
+                      <View
+                        key={category}
+                        className="overflow-hidden rounded-sm border-2 border-solid border-border bg-card"
+                      >
+                        <TouchableOpacity
+                          onPress={() => {
+                            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                            setModalExpandedCategory(isExpanded ? null : category);
+                          }}
+                          className="flex-row items-center justify-between bg-muted p-4 active:bg-border"
+                        >
+                          <View className="flex-row items-center gap-2">
+                            <Text className="font-body text-sm font-bold uppercase tracking-wider text-foreground">
+                              {category}
+                            </Text>
+                            {selectedCount > 0 && (
+                              <View className="h-5 w-5 items-center justify-center rounded-full bg-primary">
+                                <Text className="font-technical text-[10px] font-bold text-white">
+                                  {selectedCount}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          <Ionicons
+                            name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                            size={20}
+                            color="#64748B"
+                          />
+                        </TouchableOpacity>
+
+                        {isExpanded && (
+                          <View className="flex-row flex-wrap gap-2 p-4">
+                            {skills.map((skill) => {
+                              const isSelected = !!targetArray.find((ts) => ts.name === skill.name);
+                              const textStyle = isSelected ? 'text-white' : 'text-foreground';
+
+                              return (
+                                <TouchableOpacity
+                                  key={skill._id}
+                                  onPress={() =>
+                                    activeModal && toggleSearchSkill(skill.name, activeModal)
+                                  }
+                                  className={`rounded-sm border-2 border-solid px-3 py-2 active:opacity-80 ${isSelected ? 'border-primary bg-primary' : 'border-border bg-background'}`}
+                                >
+                                  <Text className={`font-body text-xs font-medium ${textStyle}`}>
+                                    {skill.name}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            )}
+          </View>
+
+          <View
+            className="border-t border-border bg-card p-4 shadow-lg"
+            style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+          >
             <TouchableOpacity
               onPress={() => {
                 setActiveModal(null);
                 setSearchQuery('');
+                setModalExpandedCategory(null);
               }}
-              className="p-2"
+              className="w-full flex-row items-center justify-center rounded-sm bg-primary py-3 active:opacity-90"
             >
-              <Ionicons name="close" size={24} color="#64748B" />
+              <Text className="font-body font-bold text-white">Done</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Search Input */}
-          <View className="relative mb-4">
-            <Ionicons
-              name="search"
-              size={20}
-              color="#64748B"
-              className="absolute left-3 top-3 z-10"
-            />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search database..."
-              placeholderTextColor="#64748B"
-              className="bottom-2 w-full rounded-sm border-solid border-border bg-card py-3 pl-10 pr-4 font-body text-foreground focus:border-primary"
-            />
-          </View>
-
-          {/* Result List */}
-          {isLoadingSkills ? (
-            <ActivityIndicator color="#1E40AF" size="large" className="mt-10" />
-          ) : (
-            <FlatList
-              data={filteredSkills}
-              keyExtractor={(item) => item._id}
-              renderItem={({ item }) => {
-                const targetArray = activeModal === 'offer' ? offering : seeking;
-                const isSelected = !!targetArray.find((s) => s.name === item.name);
-                return (
-                  <TouchableOpacity
-                    onPress={() => activeModal && toggleSearchSkill(item.name, activeModal)}
-                    className={`mb-2 flex-row items-center justify-between rounded-sm border-2 border-solid p-4 ${isSelected ? 'border-primary bg-primary' : 'border-border bg-card'}`}
-                  >
-                    <Text
-                      className={`font-technical text-sm ${isSelected ? 'text-white' : 'text-foreground'}`}
-                    >
-                      {item.name}
-                    </Text>
-                    {isSelected && <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />}
-                  </TouchableOpacity>
-                );
-              }}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 40 }}
-            />
-          )}
         </View>
       </Modal>
 
@@ -865,13 +967,13 @@ const ProfileEditScreen = () => {
           <View className="w-full rounded-sm border-2 border-solid border-border bg-card p-6 shadow-lg">
             <View className="mb-4 flex-row items-center justify-between border-b border-border pb-4">
               <View>
-                <Text className="font-technical text-lg uppercase tracking-wider text-primary">
+                <Text className="font-technical text-lg font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
                   {editingSkill?.skill.name}
                 </Text>
-                <Text className="font-technical text-[10px] uppercase text-muted-foreground">
+                <Text className="font-body text-xs text-muted-foreground">
                   {editingSkill?.type === 'offer'
-                    ? 'Configure_Offering_Details'
-                    : 'Configure_Learning_Goals'}
+                    ? 'Configure Teaching Details'
+                    : 'Configure Learning Goals'}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setEditingSkill(null)}>
@@ -879,10 +981,10 @@ const ProfileEditScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
+            <Text className="mb-2 font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
               {editingSkill?.type === 'offer'
-                ? 'Current_Proficiency_Level'
-                : 'Starting_Proficiency_Level'}
+                ? 'Your Proficiency Level'
+                : 'Desired Proficiency Level'}
             </Text>
             <View className="mb-6 flex-row flex-wrap gap-2">
               {['Beginner', 'Intermediate', 'Advanced', 'Expert'].map((level) => {
@@ -897,10 +999,10 @@ const ProfileEditScreen = () => {
                           : null,
                       )
                     }
-                    className={`rounded-sm border-2 px-3 py-2 ${isSelected ? 'border-accent bg-accent' : 'border-border bg-background'}`}
+                    className={`rounded-sm border-2 px-3 py-2 ${isSelected ? 'border-primary bg-primary' : 'border-border bg-background'}`}
                   >
                     <Text
-                      className={`font-technical text-xs uppercase ${isSelected ? 'text-white' : 'text-muted-foreground'}`}
+                      className={`font-body text-xs font-bold tracking-wider ${isSelected ? 'text-white' : 'text-muted-foreground'}`}
                     >
                       {level}
                     </Text>
@@ -910,9 +1012,9 @@ const ProfileEditScreen = () => {
             </View>
 
             <Text
-              className={`mb-2 font-technical text-xs uppercase tracking-wider ${isDescOverLimit ? 'text-red-500' : 'text-muted-foreground'}`}
+              className={`mb-2 font-body text-xs font-bold uppercase tracking-wider ${isDescOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}
             >
-              {editingSkill?.type === 'offer' ? 'Experience_Details' : 'Specific_Learning_Goals'}
+              {editingSkill?.type === 'offer' ? 'Experience Details' : 'Specific Learning Goals'}
             </Text>
             <TextInput
               value={editingSkill?.skill.description}
@@ -930,10 +1032,10 @@ const ProfileEditScreen = () => {
                   : 'What specific aspects are you looking to learn?'
               }
               placeholderTextColor="#64748B"
-              className={`min-h-[80px] w-full rounded-sm border-2 border-solid bg-background px-3 py-2 font-body text-foreground ${isDescOverLimit ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-primary'}`}
+              className={`min-h-[80px] w-full rounded-sm border-2 border-solid bg-background px-3 py-2 font-body text-foreground focus:outline-none ${isDescOverLimit ? 'border-destructive focus:border-destructive' : 'border-border focus:border-primary'}`}
             />
             <Text
-              className={`mb-6 mt-2 text-right font-technical text-[10px] uppercase tracking-wider ${isDescOverLimit ? 'font-bold text-red-500' : 'text-muted-foreground'}`}
+              className={`mb-6 mt-2 text-right font-technical text-[10px] font-bold uppercase tracking-wider ${isDescOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}
             >
               {editingSkill?.skill.description?.length || 0}/500 Characters
             </Text>
@@ -941,10 +1043,10 @@ const ProfileEditScreen = () => {
             <TouchableOpacity
               onPress={saveSkillDetails}
               disabled={isDescOverLimit}
-              className={`w-full rounded-sm bg-primary py-3 ${isDescOverLimit ? 'opacity-50' : 'active:opacity-80'}`}
+              className={`w-full rounded-sm bg-primary py-3 shadow-sm ${isDescOverLimit ? 'opacity-50' : 'active:opacity-90'}`}
             >
-              <Text className="text-center font-technical text-sm uppercase tracking-wider text-white">
-                Confirm_Parameters
+              <Text className="text-center font-body text-sm font-bold text-white">
+                Save Skill Details
               </Text>
             </TouchableOpacity>
           </View>

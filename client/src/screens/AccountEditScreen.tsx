@@ -34,6 +34,13 @@ const AccountEditScreen = () => {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const [fieldErrors, setFieldErrors] = useState({
+    email: false,
+    current: false,
+    new: false,
+    confirm: false,
+  });
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -80,72 +87,55 @@ const AccountEditScreen = () => {
     return '#22c55e'; // Green
   };
 
+  const isBasicInfoValid = firstName.trim() !== '' && lastName.trim() !== '' && email.trim() !== '';
+
+  const isAttemptingPasswordChange =
+    currentPassword !== '' || newPassword !== '' || confirmPassword !== '';
+
+  const isPasswordValid = isAttemptingPasswordChange
+    ? currentPassword !== '' &&
+      newPassword !== '' &&
+      confirmPassword !== '' &&
+      newPassword === confirmPassword &&
+      passwordScore >= 3
+    : true;
+
+  const isFormValid = isBasicInfoValid && isPasswordValid;
+
+  const handleBackendError = (errorMessage: string) => {
+    const msg = errorMessage.toLowerCase();
+    let title = 'Update Failed';
+    let displayMessage = errorMessage;
+
+    if (msg.includes('email') || msg.includes('duplicate') || msg.includes('exists')) {
+      setFieldErrors((prev) => ({ ...prev, email: true }));
+      title = 'Email Unavailable';
+      displayMessage = 'This email is already in use by another account.';
+    } else if (
+      msg.includes('current password') ||
+      msg.includes('incorrect password') ||
+      msg.includes('match')
+    ) {
+      setFieldErrors((prev) => ({ ...prev, current: true }));
+      title = 'Security Error';
+      displayMessage = 'Your current password is incorrect.';
+    } else if (msg.includes('password')) {
+      setFieldErrors((prev) => ({ ...prev, new: true }));
+    }
+
+    setAlertConfig({
+      visible: true,
+      title,
+      message: displayMessage,
+      isSuccess: false,
+      variant: 'error',
+    });
+  };
+
   const handleSave = async () => {
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
-      setAlertConfig({
-        visible: true,
-        title: 'Validation_Error',
-        message: 'Name and email fields cannot be empty.',
-        isSuccess: false,
-        variant: 'error',
-      });
-      return;
-    }
+    setFieldErrors({ email: false, current: false, new: false, confirm: false });
 
-    const isAttemptingPasswordChange = currentPassword || newPassword || confirmPassword;
-
-    if (isAttemptingPasswordChange) {
-      if (!currentPassword) {
-        setAlertConfig({
-          visible: true,
-          title: 'Security_Error',
-          message: 'You must enter your current password to set a new one.',
-          isSuccess: false,
-          variant: 'error',
-        });
-        return;
-      }
-      if (!newPassword) {
-        setAlertConfig({
-          visible: true,
-          title: 'Validation_Error',
-          message: 'You must enter a new password.',
-          isSuccess: false,
-          variant: 'error',
-        });
-        return;
-      }
-      if (!confirmPassword) {
-        setAlertConfig({
-          visible: true,
-          title: 'Validation_Error',
-          message: 'You must confirm your new password.',
-          isSuccess: false,
-          variant: 'error',
-        });
-        return;
-      }
-      if (newPassword !== confirmPassword) {
-        setAlertConfig({
-          visible: true,
-          title: 'Security_Error',
-          message: 'New passwords do not match.',
-          isSuccess: false,
-          variant: 'error',
-        });
-        return;
-      }
-      if (passwordScore < 3) {
-        setAlertConfig({
-          visible: true,
-          title: 'Weak_Signature',
-          message: 'Please enter a stronger new password to continue.',
-          isSuccess: false,
-          variant: 'error',
-        });
-        return;
-      }
-    }
+    if (!isFormValid) return;
 
     setIsLoading(true);
 
@@ -166,29 +156,18 @@ const AccountEditScreen = () => {
 
         setAlertConfig({
           visible: true,
-          title: 'Update_Successful',
-          message: 'Account updated successfully.',
+          title: 'Update Successful',
+          message: 'Your account has been updated successfully.',
           isSuccess: true,
           variant: 'success',
         });
       } else {
-        setAlertConfig({
-          visible: true,
-          title: 'Update_Failed',
-          message: 'Please check your inputs and try again.',
-          isSuccess: false,
-          variant: 'error',
-        });
+        const errorMsg = result?.message || 'Please check your inputs and try again.';
+        handleBackendError(errorMsg);
       }
     } catch (err: any) {
       console.error('Account update error:', err);
-      setAlertConfig({
-        visible: true,
-        title: 'System_Error',
-        message: err.message || 'An unexpected error occurred.',
-        isSuccess: false,
-        variant: 'error',
-      });
+      handleBackendError(err.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
@@ -215,7 +194,7 @@ const AccountEditScreen = () => {
       console.error('Delete account error:', err);
       setAlertConfig({
         visible: true,
-        title: 'System_Error',
+        title: 'System Error',
         message: 'An unexpected error occurred.',
         isSuccess: false,
         variant: 'error',
@@ -240,11 +219,11 @@ const AccountEditScreen = () => {
             <Ionicons name="arrow-back" size={24} color="#64748B" />
           </TouchableOpacity>
           <View>
-            <Text className="font-technical text-lg uppercase tracking-wider text-primary">
-              Identity_Module_01
+            <Text className="font-technical text-lg uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+              Edit Profile
             </Text>
-            <Text className="mt-1 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-              Account_Configuration_Interface
+            <Text className="mt-1 font-body text-xs text-muted-foreground">
+              Manage your personal information and security
             </Text>
           </View>
         </View>
@@ -256,49 +235,50 @@ const AccountEditScreen = () => {
       >
         {/* Personal Infomation */}
         <View className="mb-8 space-y-4">
-          <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-accent">
-            Personal_Identification
+          <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            Personal Information
           </Text>
 
           {/* First Name */}
-          <View className="mb-4 rounded-sm border-2 border-solid border-border bg-card p-4">
-            <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-              First_Name
-            </Text>
+          <View className="mb-4 rounded-sm border-2 border-border bg-card p-4">
+            <Text className="mb-2 font-body text-sm font-medium text-foreground">First Name</Text>
             <TextInput
               value={firstName}
               onChangeText={setFirstName}
-              className="w-full rounded-sm border-2 border-solid border-border bg-background px-3 py-2 font-body text-foreground focus:border-primary"
+              className="w-full rounded-sm border-2 border-border bg-background px-3 py-2 font-body text-foreground focus:border-primary focus:outline-none"
               placeholderTextColor="#64748B"
               editable={!isLoading}
             />
           </View>
 
           {/* Last Name */}
-          <View className="mb-4 rounded-sm border-2 border-solid border-border bg-card p-4">
-            <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-              Last_Name
-            </Text>
+          <View className="mb-4 rounded-sm border-2 border-border bg-card p-4">
+            <Text className="mb-2 font-body text-sm font-medium text-foreground">Last Name</Text>
             <TextInput
               value={lastName}
               onChangeText={setLastName}
-              className="w-full rounded-sm border-2 border-solid border-border bg-background px-3 py-2 font-body text-foreground focus:border-primary"
+              className="w-full rounded-sm border-2 border-border bg-background px-3 py-2 font-body text-foreground focus:border-primary focus:outline-none"
               placeholderTextColor="#64748B"
               editable={!isLoading}
             />
           </View>
 
           {/* Email */}
-          <View className="mb-4 rounded-sm border-2 border-solid border-border bg-card p-4">
-            <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-              Email_Address
+          <View className="mb-4 rounded-sm border-2 border-border bg-card p-4">
+            <Text
+              className={`mb-2 font-body text-sm font-medium ${fieldErrors.email ? 'text-destructive' : 'text-foreground'}`}
+            >
+              Email Address
             </Text>
             <TextInput
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(val) => {
+                setEmail(val);
+                if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: true }));
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
-              className="w-full rounded-sm border-2 border-solid border-border bg-background px-3 py-2 font-body text-foreground focus:border-primary"
+              className={`w-full rounded-sm border-2 bg-background px-3 py-2 font-body text-foreground focus:border-primary focus:outline-none ${fieldErrors.email ? 'border-destructive' : 'border-border'}`}
               placeholderTextColor="#64748B"
               editable={!isLoading}
             />
@@ -307,31 +287,37 @@ const AccountEditScreen = () => {
 
         {/* Security Override */}
         <View className="mb-8">
-          <Text className="mb-4 font-technical text-xs uppercase tracking-wider text-accent">
-            Security_Override
+          <Text className="mb-4 font-technical text-xs uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            Security Settings
           </Text>
 
-          <View className="rounded-sm border-2 border-solid border-accent bg-card p-4">
+          <View className="rounded-sm border-2 border-border bg-card p-4">
             <View className="mb-4">
-              <Text className="mb-1 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-                Password_Authentication
+              <Text className="mb-1 font-body text-sm font-medium text-foreground">
+                Change Password
               </Text>
               <Text className="font-body text-xs text-muted-foreground">
-                Update your security credentials
+                Update your account password to keep it secure
               </Text>
             </View>
 
             {/* Current Password */}
             <View className="mb-4">
-              <Text className="text-destructive mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-                Current_Password
+              <Text
+                className={`mb-2 font-body text-sm font-medium ${fieldErrors.current ? 'text-destructive' : 'text-foreground'}`}
+              >
+                Current Password
               </Text>
               <View className="relative justify-center">
                 <TextInput
                   value={currentPassword}
-                  onChangeText={setCurrentPassword}
+                  onChangeText={(val) => {
+                    setCurrentPassword(val);
+                    if (fieldErrors.current)
+                      setFieldErrors((prev) => ({ ...prev, current: false }));
+                  }}
                   secureTextEntry={!showCurrent}
-                  className="border-destructive w-full rounded-sm border-2 border-solid bg-background px-3 py-2 pr-10 font-body text-foreground focus:border-primary"
+                  className={`w-full rounded-sm border-2 bg-background px-3 py-2 pr-10 font-body text-foreground focus:border-primary focus:outline-none ${fieldErrors.current ? 'border-destructive' : 'border-border'}`}
                   placeholder="Enter current password"
                   placeholderTextColor="#64748B"
                   editable={!isLoading}
@@ -347,15 +333,20 @@ const AccountEditScreen = () => {
 
             {/* New Password */}
             <View className="mb-4">
-              <Text className="text-destructive mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-                New_Password
+              <Text
+                className={`mb-2 font-body text-sm font-medium ${fieldErrors.new ? 'text-destructive' : 'text-foreground'}`}
+              >
+                New Password
               </Text>
               <View className="relative justify-center">
                 <TextInput
                   value={newPassword}
-                  onChangeText={setNewPassword}
+                  onChangeText={(val) => {
+                    setNewPassword(val);
+                    if (fieldErrors.new) setFieldErrors((prev) => ({ ...prev, new: false }));
+                  }}
                   secureTextEntry={!showNew}
-                  className="border-destructive w-full rounded-sm border-2 border-solid bg-background px-3 py-2 pr-10 font-body text-foreground focus:border-primary"
+                  className={`w-full rounded-sm border-2 bg-background px-3 py-2 pr-10 font-body text-foreground focus:border-primary focus:outline-none ${fieldErrors.new ? 'border-destructive' : 'border-border'}`}
                   placeholder="Enter new password"
                   placeholderTextColor="#64748B"
                   editable={!isLoading}
@@ -377,7 +368,7 @@ const AccountEditScreen = () => {
                     />
                   </View>
                   <Text className="mt-1 text-right font-technical text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {passwordScore < 3 ? 'Weak_Signature' : 'Strong_Signature'}
+                    {passwordScore < 3 ? 'Weak Password' : 'Strong Password'}
                   </Text>
                 </View>
               )}
@@ -385,15 +376,21 @@ const AccountEditScreen = () => {
 
             {/* Confirm Password */}
             <View className="mb-4">
-              <Text className="text-destructive mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-                Confirm_New_Password
+              <Text
+                className={`mb-2 font-body text-sm ${fieldErrors.confirm ? 'text-destructive' : 'text-foreground'}`}
+              >
+                Confirm New Password
               </Text>
               <View className="relative justify-center">
                 <TextInput
                   value={confirmPassword}
-                  onChangeText={setConfirmPassword}
+                  onChangeText={(val) => {
+                    setConfirmPassword(val);
+                    if (fieldErrors.confirm)
+                      setFieldErrors((prev) => ({ ...prev, confirm: false }));
+                  }}
                   secureTextEntry={!showConfirm}
-                  className="border-destructive w-full rounded-sm border-2 border-solid bg-background px-3 py-2 pr-10 font-body text-foreground focus:border-primary"
+                  className={`w-full rounded-sm border-2 bg-background px-3 py-2 pr-10 font-body text-foreground focus:border-primary focus:outline-none ${fieldErrors.confirm ? 'border-destructive' : 'border-border'}`}
                   placeholder="Confirm current password"
                   placeholderTextColor="#64748B"
                   editable={!isLoading}
@@ -408,13 +405,13 @@ const AccountEditScreen = () => {
             </View>
 
             {/* Password Requirements */}
-            <View className="mt-2 rounded-sm border-2 border-solid border-border bg-background p-3">
-              <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-                Security_Requirements
+            <View className="mt-2 rounded-sm border-2 border-border bg-background p-3">
+              <Text className="mb-1 font-body text-xs font-bold text-foreground">
+                Security Requirements
               </Text>
               <Text className="font-body text-xs leading-relaxed text-muted-foreground">
-                Our system uses dynamic entropy checking. Use long phrases, unpredictable words, or
-                a mix of characters to achieve a strong security signature.
+                Our system uses dynamic entropy checking. Please use long phrases, unpredictable
+                words, or a mix of characters to ensure your account remains secure.
               </Text>
             </View>
           </View>
@@ -422,22 +419,20 @@ const AccountEditScreen = () => {
 
         {/* Danger Zone */}
         <View className="mb-8">
-          <Text className="mb-4 font-technical text-xs uppercase tracking-wider text-red-600 dark:text-red-500">
-            Danger_Zone
+          <Text className="text-destructive mb-4 font-technical text-xs uppercase tracking-wider">
+            Danger Zone
           </Text>
           <TouchableOpacity
             onPress={() => setShowDeleteConfirm(true)}
-            className="w-full flex-row items-center justify-between rounded-sm border-2 border-solid border-[#ef4444] bg-card p-4 active:opacity-80"
+            className="border-destructive w-full flex-row items-center justify-between rounded-sm border-2 bg-card p-4 active:opacity-80"
           >
             <View className="flex-row items-center gap-3">
-              <View className="h-10 w-10 items-center justify-center rounded-sm bg-red-100 dark:bg-red-950">
+              <View className="border-destructive h-10 w-10 items-center justify-center rounded-sm border-2 bg-background">
                 <Ionicons name="trash" size={20} color="#ef4444" />
               </View>
               <View>
-                <Text className="font-body font-medium text-red-600 dark:text-red-500">
-                  Delete Account
-                </Text>
-                <Text className="mt-0.5 font-body text-xs text-red-600/70 dark:text-red-500/70">
+                <Text className="text-destructive font-body font-bold">Delete Account</Text>
+                <Text className="text-destructive mt-0.5 font-body text-xs opacity-80">
                   Permanently delete your account
                 </Text>
               </View>
@@ -449,32 +444,30 @@ const AccountEditScreen = () => {
 
       {/* Action Footer */}
       <View
-        className="flex-row gap-3 border-t border-border bg-card p-4"
+        className="flex-row gap-3 border-t border-border bg-card p-4 shadow-md"
         style={{ paddingBottom: Math.max(insets.bottom, 16) }}
       >
         <TouchableOpacity
-          onPress={handleSave}
+          onPress={() => navigation.goBack()}
           disabled={isLoading}
-          className={`flex-1 flex-row items-center justify-center gap-2 rounded-sm bg-primary py-3 ${isLoading ? 'opacity-50' : 'active:opacity-80'}`}
+          className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-border bg-card py-3 active:bg-muted"
+        >
+          <Ionicons name="close" size={20} color="#64748B" />
+          <Text className="font-body font-semibold text-foreground">Cancel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={isLoading || !isFormValid}
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-sm py-3 shadow-sm ${isLoading || !isFormValid ? 'bg-slate-400 opacity-70 dark:bg-slate-600' : 'bg-primary active:opacity-90'}`}
         >
           {isLoading ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <Ionicons name="save" size={20} color="#FFFFFF" />
           )}
-          <Text className="font-technical text-sm uppercase tracking-wider text-primary-foreground">
-            {isLoading ? 'Deploying...' : 'Deploy_Changes'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          disabled={isLoading}
-          className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-border bg-transparent py-3 active:bg-muted"
-        >
-          <Ionicons name="close" size={20} color="#64748B" />
-          <Text className="font-technical text-sm uppercase tracking-wider text-foreground">
-            Cancel
+          <Text className="font-body font-bold text-primary-foreground">
+            {isLoading ? 'Saving...' : 'Save Changes'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -483,8 +476,8 @@ const AccountEditScreen = () => {
       <ConfirmModal
         visible={showDeleteConfirm}
         title="Delete_Account"
-        message="Are you absolutely sure? This action cannot be undone. This will permanently delete your account, remove all your skills, trades, and messages from our servers."
-        confirmText="Delete_Forever"
+        message="Are you absolutely sure? This action cannot be undone. This will permanently delete your account, and remove all your skills, trades, and messages from our servers."
+        confirmText="Delete Forever"
         cancelText="Cancel"
         isDestructive={true}
         onConfirm={handleDeleteAccount}

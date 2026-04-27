@@ -1,6 +1,15 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { createRef, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
 import { getConversations } from '../api/message';
@@ -8,6 +17,7 @@ import { socketService } from '../sockets/socket';
 import { hideTradeConversation } from '../api/trade';
 import ConfirmModal from '../components/ConfirmModal';
 import { Ionicons } from '@expo/vector-icons';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 interface IConversation {
   tradeId: string;
@@ -32,8 +42,14 @@ const InboxScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
+
   const [conversations, setConversations] = useState<IConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const swipeableRefs = useRef(new Map<string, React.RefObject<any>>());
 
   const [archiveConfig, setArchiveConfig] = useState<{
     visible: boolean;
@@ -118,6 +134,13 @@ const InboxScreen = () => {
     });
   };
 
+  const getSwipeableRef = (tradeId: string) => {
+    if (!swipeableRefs.current.has(tradeId)) {
+      swipeableRefs.current.set(tradeId, createRef<any>());
+    }
+    return swipeableRefs.current.get(tradeId);
+  };
+
   const executeArchive = async () => {
     setConversations((prev) => prev.filter((c) => c.tradeId !== archiveConfig.tradeId));
 
@@ -129,6 +152,21 @@ const InboxScreen = () => {
     }
 
     setArchiveConfig({ visible: false, tradeId: '', partnerName: '' });
+  };
+
+  const closeSwipeable = (tradeId: string) => {
+    const ref = swipeableRefs.current.get(tradeId);
+    if (ref?.current) {
+      ref.current.close();
+    }
+  };
+
+  const handleSwipeableOpen = (tradeId: string) => {
+    [...swipeableRefs.current.entries()].forEach(([key, ref]) => {
+      if (key !== tradeId && ref?.current) {
+        ref.current.close();
+      }
+    });
   };
 
   const totalUnreadCount = conversations.reduce(
@@ -144,7 +182,7 @@ const InboxScreen = () => {
         style={{ paddingTop: Math.max(insets.top, 24) }}
       >
         <Text className="font-technical text-2xl uppercase tracking-wider text-foreground">
-          Communication_Logs
+          Messages
         </Text>
         <Text className="mt-2 font-body text-sm text-muted-foreground">
           {totalUnreadCount} unread message{totalUnreadCount !== 1 ? 's' : ''}
@@ -155,14 +193,15 @@ const InboxScreen = () => {
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
         {isLoading ? (
           <View className="items-center justify-center py-12">
-            <ActivityIndicator size="large" color="#4F46E5" />
+            <ActivityIndicator size="large" color={primaryIconColor} />
             <Text className="mt-4 font-technical text-sm uppercase tracking-wider text-muted-foreground">
-              Decrypting_Logs...
+              Loading Inbox...
             </Text>
           </View>
         ) : conversations.length === 0 ? (
           <View className="items-center py-12">
-            <Text className="mb-2 font-technical uppercase text-muted-foreground">No_Messages</Text>
+            <Ionicons name="chatbubble-outline" size={48} color="#64748B" className="mb-4" />
+            <Text className="mb-2 font-technical uppercase text-muted-foreground">Inbox Empty</Text>
             <Text className="font-body text-sm text-muted-foreground">
               Start a conversation with a swap partner!
             </Text>
@@ -172,9 +211,27 @@ const InboxScreen = () => {
             {conversations.map((conversation) => {
               const hasUnread = conversation.unreadCount > 0;
 
-              return (
+              const renderRightActions = () => (
                 <TouchableOpacity
-                  key={conversation.tradeId}
+                  onPress={() => {
+                    closeSwipeable(conversation.tradeId);
+                    setArchiveConfig({
+                      visible: true,
+                      tradeId: conversation.tradeId,
+                      partnerName: conversation.partnerName,
+                    });
+                  }}
+                  className="bg-destructive w-20 items-center justify-center"
+                >
+                  <Ionicons name="archive" size={24} color="#FFFFFF" />
+                  <Text className="mt-1 font-body text-[10px] font-bold uppercase tracking-wider text-white">
+                    Hide
+                  </Text>
+                </TouchableOpacity>
+              );
+
+              const ChatRow = (
+                <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() =>
                     navigation.navigate('Chat', {
@@ -193,12 +250,11 @@ const InboxScreen = () => {
                       receivingDesc: conversation.receivingDesc,
                     })
                   }
-                  className="relative flex-row overflow-hidden bg-card p-4 active:bg-muted"
+                  className={`relative flex-row overflow-hidden bg-card p-4 active:bg-muted ${hasUnread ? 'border-l-4 border-primary' : 'border-l-4 border-transparent'}`}
                 >
-                  {hasUnread && <View className="absolute bottom-0 left-0 top-0 w-1 bg-accent" />}
-                  <View className="flex-1 flex-row gap-4">
+                  <View className="flex-1 flex-row items-center gap-4">
                     {/* Avatar */}
-                    <View className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-sm border-2 border-solid border-muted-foreground bg-muted">
+                    <View className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-sm border-2 border-muted-foreground bg-muted">
                       <Image
                         source={{ uri: conversation.partnerAvatar || 'https://placehold.co/150' }}
                         className="h-full w-full"
@@ -209,85 +265,86 @@ const InboxScreen = () => {
 
                     {/* Message Content */}
                     <View className="flex-1 justify-center">
-                      <Text
-                        className={`mb-1 font-body font-medium ${hasUnread ? 'text-primary' : 'text-foreground'}`}
-                        numberOfLines={1}
-                      >
-                        {conversation.partnerName}
-                      </Text>
-
-                      <View className="my-0.5 flex-row items-center gap-1 opacity-80">
-                        <Text
-                          className="font-technical text-[10px] uppercase text-muted-foreground"
-                          numberOfLines={1}
-                        >
-                          {conversation.offering} ↔ {conversation.receiving}
-                        </Text>
-                      </View>
-
-                      <Text
-                        className={`font-body text-sm ${hasUnread ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
-                        numberOfLines={1}
-                      >
-                        {conversation.lastMessage}
-                      </Text>
-                    </View>
-
-                    <View className="items-end justify-between pl-2">
-                      <View className="flex-row items-center gap-3">
-                        <Text className="font-technical text-xs text-muted-foreground">
+                      <View className="mb-1 flex-row items-center justify-between">
+                        <View className="flex-1 flex-row items-center pr-2">
+                          <Text
+                            className={`font-body font-bold ${hasUnread ? 'text-primary dark:text-[#A5B4FC]' : 'text-muted-foreground'}`}
+                            numberOfLines={1}
+                          >
+                            {conversation.partnerName}
+                          </Text>
+                          <Text className="mx-2 text-muted-foreground">•</Text>
+                          <Text
+                            className="flex-1 font-technical text-[10px] uppercase text-muted-foreground"
+                            numberOfLines={1}
+                          >
+                            {conversation.offering} ↔ {conversation.receiving}
+                          </Text>
+                        </View>
+                        <Text className="whitespace-nowrap font-body text-[10px] text-muted-foreground">
                           {formatTimestamp(conversation.timestamp)}
                         </Text>
-
-                        <TouchableOpacity
-                          activeOpacity={0.7}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                          className="rounded-sm p-1 active:bg-border"
-                          onPress={(e) => {
-                            if (e && e.stopPropagation) e.stopPropagation();
-
-                            setArchiveConfig({
-                              visible: true,
-                              tradeId: conversation.tradeId,
-                              partnerName: conversation.partnerName,
-                            });
-                          }}
-                        >
-                          <Ionicons name="archive-outline" size={16} color="#64748B" />
-                        </TouchableOpacity>
                       </View>
-                      {/* Unread Badge */}
-                      {hasUnread ? (
-                        <View className="mt-1 justify-center pl-2">
-                          <View className="h-6 w-6 items-center justify-center rounded-full bg-accent">
-                            <Text className="font-technical text-xs font-bold text-accent-foreground">
-                              {conversation.unreadCount}
-                            </Text>
-                          </View>
+
+                      <View className="flex-row items-center justify-between">
+                        <Text
+                          className={`flex-1 pr-4 font-body text-sm ${hasUnread ? 'font-bold text-foreground' : 'text-muted-foreground'}`}
+                          numberOfLines={1}
+                        >
+                          {conversation.lastMessage}
+                        </Text>
+
+                        <View className="flex-row items-center gap-3">
+                          {hasUnread && (
+                            <View className="h-5 w-5 items-center justify-center rounded-full bg-primary">
+                              <Text className="font-body text-[10px] font-bold text-primary-foreground">
+                                {conversation.unreadCount}
+                              </Text>
+                            </View>
+                          )}
+
+                          {Platform.OS === 'web' && (
+                            <TouchableOpacity
+                              activeOpacity={0.7}
+                              onPress={(e) => {
+                                if (e && e.stopPropagation) e.stopPropagation();
+
+                                setArchiveConfig({
+                                  visible: true,
+                                  tradeId: conversation.tradeId,
+                                  partnerName: conversation.partnerName,
+                                });
+                              }}
+                              className="flex-row items-center gap-1.5 rounded-sm border border-border bg-muted px-3 py-1.5 transition-colors hover:border-red-200 hover:bg-red-50 dark:hover:border-red-900/50 dark:hover:bg-red-900/20"
+                            >
+                              <Ionicons name="archive-outline" size={18} color="#EF4444" />
+                              <Text className="text-destructive font-technical text-[10px] font-bold uppercase tracking-wider">
+                                Hide
+                              </Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
-                      ) : (
-                        <View className="mt-1 h-6 w-6" />
-                      )}
+                      </View>
                     </View>
                   </View>
-
-                  {/* Technical Grid Pattern for Unread */}
-                  {hasUnread && (
-                    <View
-                      className="absolute bottom-0 right-0 top-0 w-1 opacity-20"
-                      pointerEvents="none"
-                    >
-                      <Svg width="100%" height="100%">
-                        <Defs>
-                          <Pattern id="stripes" width="4" height="8" patternUnits="userSpaceOnUse">
-                            <Rect width="4" height="2" fill="#4F46E5" />
-                          </Pattern>
-                        </Defs>
-                        <Rect width="100%" height="100%" fill="url(#stripes)" />
-                      </Svg>
-                    </View>
-                  )}
                 </TouchableOpacity>
+              );
+
+              if (Platform.OS === 'web') {
+                return <View key={conversation.tradeId}>{ChatRow}</View>;
+              }
+
+              return (
+                <Swipeable
+                  key={conversation.tradeId}
+                  ref={getSwipeableRef(conversation.tradeId)}
+                  onSwipeableWillOpen={() => handleSwipeableOpen(conversation.tradeId)}
+                  renderRightActions={renderRightActions}
+                  friction={2}
+                  rightThreshold={40}
+                >
+                  {ChatRow}
+                </Swipeable>
               );
             })}
           </View>

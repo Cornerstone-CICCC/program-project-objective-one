@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -21,6 +22,7 @@ import './global.css';
 import { ThemeController } from './src/components/ThemeController';
 import { useAuthStore } from './src/store/auth.store';
 import { socketService } from './src/sockets/socket';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -62,15 +64,17 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <NavigationContainer
-        documentTitle={{
-          formatter: () => 'SWAPPA',
-        }}
-      >
-        <ThemeController />
-        <RootNavigator />
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <GestureHandlerRootView>
+      <SafeAreaProvider>
+        <NavigationContainer
+          documentTitle={{
+            formatter: () => 'SWAPPA',
+          }}
+        >
+          <ThemeController />
+          <RootNavigator />
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

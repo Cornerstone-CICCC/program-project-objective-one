@@ -1,8 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { createRef, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import {
   clearReadNotifications,
   deleteNotification,
@@ -37,13 +46,41 @@ const NotificationsScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
+
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const swipeableRefs = useRef(new Map<string, React.RefObject<any>>());
 
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [selectedNotifId, setSelectedNotifId] = useState<string | null>(null);
 
   const [clearLogsConfirmVisible, setClearLogsConfirmVisible] = useState(false);
+
+  const getSwipeableRef = (notifId: string) => {
+    if (!swipeableRefs.current.has(notifId)) {
+      swipeableRefs.current.set(notifId, createRef<any>());
+    }
+    return swipeableRefs.current.get(notifId);
+  };
+
+  const closeSwipeable = (notifId: string) => {
+    const ref = swipeableRefs.current.get(notifId);
+    if (ref?.current) {
+      ref.current.close();
+    }
+  };
+
+  const handleSwipeableOpen = (notifId: string) => {
+    [...swipeableRefs.current.entries()].forEach(([key, ref]) => {
+      if (key !== notifId && ref?.current) {
+        ref.current.close();
+      }
+    });
+  };
 
   const formatTimestamp = (dateString: string) => {
     const date = new Date(dateString);
@@ -77,6 +114,64 @@ const NotificationsScreen = () => {
     });
   };
 
+  const parseNotificationContent = (notif: INotification) => {
+    let title = notif.title;
+    let message = notif.message;
+
+    switch (notif.type) {
+      case 'SWAP_REQUESTED':
+        title = 'New Swap Request';
+        message = 'A new skill swap proposal has arrived.';
+        break;
+      case 'SWAP_ACCEPTED':
+        title = 'Swap Accepted';
+        message = 'Your swap proposal was accepted! You can now chat with your partner.';
+        break;
+      case 'SWAP_CANCELLED':
+        title = 'Swap Cancelled';
+        if (message.includes('Reason:')) {
+          const reason = message.split('Reason:')[1].trim();
+          message = `A swap request was declined or cancelled. Reason: ${reason}`;
+        } else {
+          message = 'A swap request was declined or cancelled.';
+        }
+        break;
+      case 'PARTNER_COMPLETED':
+        title = 'Action Required';
+        message = 'Your partner marked the swap as complete. Please confirm on your end.';
+        break;
+      case 'SWAP_COMPLETED':
+        title = 'Swap Completed';
+        message = 'Trade fully completed! You can now leave a review.';
+        break;
+      case 'NEW_EVALUATION':
+        title = 'New Review';
+        message = message.replace('post-trade report', 'review');
+        break;
+    }
+
+    return { title, message };
+  };
+
+  const getNotificationConfig = (type: NotificationType) => {
+    switch (type) {
+      case 'SWAP_REQUESTED':
+        return { icon: 'swap-horizontal', color: isDark ? '#818CF8' : '#4F46E5' }; // Indigo
+      case 'SWAP_ACCEPTED':
+      case 'SWAP_COMPLETED':
+        return { icon: 'checkmark-done-circle', color: isDark ? '#34D399' : '#10B981' }; // Emerald
+      case 'PARTNER_COMPLETED':
+        return { icon: 'time', color: isDark ? '#FBBF24' : '#D97706' }; // Amber
+      case 'SWAP_CANCELLED':
+        return { icon: 'close-circle', color: isDark ? '#F87171' : '#DC2626' }; // Red
+      case 'NEW_EVALUATION':
+        return { icon: 'star', color: isDark ? '#FBBF24' : '#D97706' }; // Amber
+      case 'SYSTEM_ALERT':
+      default:
+        return { icon: 'hardware-chip', color: isDark ? '#94A3B8' : '#64748B' }; // Slate
+    }
+  };
+
   const fetchNotifications = async (isSilent = false) => {
     if (!isSilent) setIsLoading(true);
     try {
@@ -106,7 +201,6 @@ const NotificationsScreen = () => {
     if (!socket) return;
 
     const handleNewNotification = () => {
-      console.log('Real-time notification received via socket!');
       fetchNotifications(true);
     };
 
@@ -150,25 +244,6 @@ const NotificationsScreen = () => {
     }
   };
 
-  const getNotificationConfig = (type: NotificationType) => {
-    switch (type) {
-      case 'SWAP_REQUESTED':
-        return { icon: 'swap-horizontal', color: '#4f46e5' }; // Primary Blue
-      case 'SWAP_ACCEPTED':
-      case 'SWAP_COMPLETED':
-        return { icon: 'checkmark-done-circle', color: '#16a34a' }; // Green
-      case 'PARTNER_COMPLETED':
-        return { icon: 'time', color: '#eab308' }; // Yellow
-      case 'SWAP_CANCELLED':
-        return { icon: 'close-circle', color: '#ef4444' }; // Red
-      case 'NEW_EVALUATION':
-        return { icon: 'star', color: '#eab308' }; // Yellow
-      case 'SYSTEM_ALERT':
-      default:
-        return { icon: 'hardware-chip', color: '#64748b' }; // Muted Gray
-    }
-  };
-
   const handleNotificationPress = async (notification: INotification) => {
     if (!notification.is_read) {
       setNotifications((prev) =>
@@ -205,9 +280,9 @@ const NotificationsScreen = () => {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background px-6">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={primaryIconColor} />
         <Text className="mt-4 text-center font-technical text-sm uppercase tracking-wider text-muted-foreground">
-          Retrieving_Alert_Logs...
+          Loading Notifications...
         </Text>
       </View>
     );
@@ -220,33 +295,41 @@ const NotificationsScreen = () => {
         className="border-b-2 border-solid border-border bg-card px-6 pb-6"
         style={{ paddingTop: Math.max(insets.top, 24) }}
       >
-        <View className="mb-4 flex-row items-center justify-between">
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            className="ml-[-8px] rounded-sm p-2 active:bg-muted"
-          >
-            <Ionicons name="arrow-back" size={28} color="#64748B" />
-          </TouchableOpacity>
+        <View className="flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <View className="flex-row items-center gap-2">
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              className="rounded-sm p-1 active:bg-muted"
+            >
+              <Ionicons name="arrow-back" size={28} color="#64748B" />
+            </TouchableOpacity>
+            <Text className="font-technical text-2xl uppercase tracking-wider text-foreground">
+              Notifications
+            </Text>
+          </View>
 
-          <View className="flex-row gap-3">
-            <TouchableOpacity onPress={handleMarkAllRead} className="p-2 active:opacity-70">
-              <Text className="font-technical text-xs uppercase tracking-wider text-primary">
-                Read_All
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity
+              onPress={handleMarkAllRead}
+              className="flex-row items-center gap-1.5 rounded-full border-2 border-border bg-muted px-3 py-1.5 active:opacity-70"
+            >
+              <Ionicons name="checkmark-done" size={14} color={primaryIconColor} />
+              <Text className="font-technical text-[10px] font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+                Mark All Read
               </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               onPress={() => setClearLogsConfirmVisible(true)}
-              className="p-2 active:opacity-70"
+              className="flex-row items-center gap-1.5 rounded-full border-2 border-red-200 bg-red-50 px-3 py-1.5 active:opacity-70 dark:border-red-900/50 dark:bg-red-900/20"
             >
-              <Text className="font-technical text-xs uppercase tracking-wider text-red-500">
-                Clear_Logs
+              <Ionicons name="trash-outline" size={14} color="#EF4444" />
+              <Text className="text-destructive font-technical text-[10px] font-bold uppercase tracking-wider">
+                Clear Read
               </Text>
             </TouchableOpacity>
           </View>
         </View>
-        <Text className="font-technical text-2xl uppercase tracking-wider text-foreground">
-          System_Alerts
-        </Text>
       </View>
 
       {/* Alerts Feed */}
@@ -259,7 +342,7 @@ const NotificationsScreen = () => {
           <View className="items-center justify-center py-10">
             <Ionicons name="notifications-off-outline" size={48} color="#64748B" />
             <Text className="mt-4 font-technical text-sm uppercase tracking-wider text-muted-foreground">
-              No_Active_Alerts
+              No Notifications
             </Text>
           </View>
         ) : (
@@ -267,71 +350,107 @@ const NotificationsScreen = () => {
             {notifications.map((notification) => {
               const config = getNotificationConfig(notification.type);
               const formattedDate = formatTimestamp(notification.createdAt);
+              const isUnread = !notification.is_read;
 
-              return (
+              const { title, message } = parseNotificationContent(notification);
+
+              const renderRightActions = () => (
                 <TouchableOpacity
-                  key={notification._id}
-                  onPress={() => handleNotificationPress(notification)}
+                  onPress={() => {
+                    closeSwipeable(notification._id);
+                    setSelectedNotifId(notification._id);
+                    setDeleteConfirmVisible(true);
+                  }}
+                  className="bg-destructive w-20 items-center justify-center rounded-r-sm"
+                >
+                  <Ionicons name="trash" size={24} color="#FFFFFF" />
+                  <Text className="mt-1 font-body text-[10px] font-bold uppercase tracking-wider text-white">
+                    Delete
+                  </Text>
+                </TouchableOpacity>
+              );
+
+              const NotificationRow = (
+                <TouchableOpacity
                   activeOpacity={0.7}
-                  className={`flex-row items-start gap-4 rounded-sm border-2 border-solid p-4 ${notification.is_read ? 'border-border bg-card opacity-60' : 'border-border bg-card'}`}
+                  onPress={() => handleNotificationPress(notification)}
+                  className={`relative flex-row items-center gap-4 overflow-hidden rounded-sm border-y border-r border-solid p-4 ${isUnread ? 'border-l-4 border-y-border border-l-primary border-r-border bg-card' : 'border-l border-border border-l-border bg-card opacity-70'}`}
                 >
                   {/* Icon Badge */}
                   <View
-                    className="mt-1 items-center justify-center rounded-sm border-2 border-solid bg-muted p-2"
-                    style={{ borderColor: notification.is_read ? '#CBD5E1' : config.color }}
+                    className="items-center justify-center rounded-sm border-2 border-solid bg-muted p-2"
+                    style={{ borderColor: isUnread ? config.color : '#CBD5E1' }}
                   >
                     <Ionicons
                       name={config.icon as any}
-                      size={18}
-                      color={notification.is_read ? '#64748B' : config.color}
+                      size={20}
+                      color={isUnread ? config.color : '#64748B'}
                     />
                   </View>
 
                   {/* Content */}
                   <View className="flex-1">
                     <View className="mb-1 flex-row items-center justify-between">
-                      <View className="flex-col">
-                        <Text
-                          className="font-technical text-[10px] uppercase tracking-wider"
-                          style={{ color: notification.is_read ? '#64748B' : config.color }}
-                        >
-                          {notification.title}
-                        </Text>
-                        <Text className="font-technical text-[10px] text-muted-foreground">
-                          {formattedDate}
-                        </Text>
-                      </View>
-
-                      {/* Explicit Delete Button */}
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          if (e && e.stopPropagation) e.stopPropagation();
-                          setSelectedNotifId(notification._id);
-                          setDeleteConfirmVisible(true);
-                        }}
-                        hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                        className="p-1 active:opacity-50"
+                      <Text
+                        className={`flex-1 font-technical text-sm font-bold tracking-wider ${isUnread ? 'text-foreground' : 'text-muted-foreground'}`}
+                        style={{ color: isUnread ? config.color : '#64748B' }}
                       >
-                        <Ionicons
-                          name="close"
-                          size={20}
-                          color={notification.is_read ? '#94A3B8' : '#64748B'}
-                        />
-                      </TouchableOpacity>
+                        {title}
+                      </Text>
+                      <Text className="ml-2 font-body text-[10px] text-muted-foreground">
+                        {formattedDate}
+                      </Text>
                     </View>
 
-                    <Text
-                      className={`mt-1 font-body text-sm leading-relaxed ${notification.is_read ? 'text-muted-foreground' : 'font-medium text-foreground'}`}
-                    >
-                      {notification.message}
-                    </Text>
+                    <View className="flex-row items-end justify-between">
+                      <Text
+                        className={`flex-1 pr-2 font-body text-sm leading-relaxed ${isUnread ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
+                      >
+                        {message}
+                      </Text>
+                    </View>
                   </View>
 
-                  {/* Unread Dot Indicator */}
-                  {!notification.is_read && (
-                    <View className="mt-2 h-2 w-2 rounded-full bg-primary" />
+                  {/* Explicit Delete Button (Web Only) */}
+                  {Platform.OS === 'web' && (
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={(e) => {
+                        if (e && e.stopPropagation) e.stopPropagation();
+                        setSelectedNotifId(notification._id);
+                        setDeleteConfirmVisible(true);
+                      }}
+                      className="ml-2 flex-row items-center gap-1.5 rounded-sm border-2 border-border bg-muted px-3 py-1.5 transition-colors hover:border-red-200 hover:bg-red-50 dark:hover:border-red-900/50 dark:hover:bg-red-900/20"
+                    >
+                      <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                      <Text className="text-destructive font-body text-[10px] font-bold uppercase tracking-wider">
+                        Delete
+                      </Text>
+                    </TouchableOpacity>
                   )}
                 </TouchableOpacity>
+              );
+
+              if (Platform.OS === 'web') {
+                return (
+                  <View key={notification._id} className="mb-3">
+                    {NotificationRow}
+                  </View>
+                );
+              }
+
+              return (
+                <Swipeable
+                  key={notification._id}
+                  ref={getSwipeableRef(notification._id)}
+                  onSwipeableWillOpen={() => handleSwipeableOpen(notification._id)}
+                  renderRightActions={renderRightActions}
+                  friction={2}
+                  rightThreshold={40}
+                  containerStyle={{ marginBottom: 12 }}
+                >
+                  {NotificationRow}
+                </Swipeable>
               );
             })}
           </View>
@@ -341,20 +460,23 @@ const NotificationsScreen = () => {
       {/* Confirm Modals */}
       <ConfirmModal
         visible={deleteConfirmVisible}
-        title="Purge Alert"
-        message="Are you sure you want to permanently remove this notification log?"
+        title="Delete Notification"
+        message="Are you sure you want to permanently remove this notification?"
         confirmText="Delete"
         cancelText="Cancel"
         isDestructive={true}
-        onCancel={() => setClearLogsConfirmVisible(false)}
+        onCancel={() => {
+          setDeleteConfirmVisible(false);
+          setSelectedNotifId(null);
+        }}
         onConfirm={executeSingleDelete}
       />
 
       <ConfirmModal
         visible={clearLogsConfirmVisible}
-        title="Clear Read Logs"
-        message="This will permanently delete all notifications that you have already read. Unread alerts will remain."
-        confirmText="Clear Read Logs"
+        title="Clear Read Notifications"
+        message="This will permanently delete all notifications that you have already read. Unread alerts will remain safe."
+        confirmText="Clear Read"
         cancelText="Cancel"
         isDestructive={true}
         onCancel={() => setClearLogsConfirmVisible(false)}
