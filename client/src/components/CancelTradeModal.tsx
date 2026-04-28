@@ -73,21 +73,19 @@ const CancelTradeModal = ({ visible, onClose, onConfirm }: CancelTradeModalProps
           onClose();
         }}
       >
-        <View className="flex-1 justify-center bg-black/70 px-4">
+        <View className="flex-1 justify-center bg-black/60 px-6">
           {/* Prevent touches on the modal card from closing the modal */}
           <TouchableWithoutFeedback>
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
               keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
             >
-              <View className="rounded-sm border-2 border-border bg-card shadow-xl">
+              <View className="overflow-hidden rounded-sm border-2 border-border bg-card shadow-xl">
                 {/* Header */}
-                <View className="flex-row items-center justify-between border-b border-border p-4">
+                <View className="flex-row items-center justify-between border-b border-border p-5">
                   <View className="flex-row items-center gap-2">
                     <Ionicons name="warning" size={20} color="#EF4444" />
-                    <Text className="font-technical text-base font-bold uppercase tracking-wider text-foreground">
-                      Abort_Swap_Protocol
-                    </Text>
+                    <Text className="font-body text-lg font-bold text-foreground">Cancel Swap</Text>
                   </View>
                   <TouchableOpacity
                     onPress={onClose}
@@ -99,13 +97,13 @@ const CancelTradeModal = ({ visible, onClose, onConfirm }: CancelTradeModalProps
                 </View>
 
                 <View className="p-5">
-                  <Text className="mb-4 font-body text-sm text-muted-foreground">
-                    Please specify the reason for terminating this trade. This provides closure and
-                    helps maintain ecosystem quality.
+                  <Text className="mb-4 font-body text-sm leading-relaxed text-muted-foreground">
+                    Please tell us why you are canceling this swap. This helps maintain a quality
+                    community ecosystem.
                   </Text>
 
                   {/* Radio Button List */}
-                  <View className="mb-4 flex-col gap-3">
+                  <View className="mb-4 flex-col gap-4">
                     {CANCELLATION_REASONS.map((reason) => {
                       const isSeleted = selectedReason === reason;
 
@@ -123,7 +121,7 @@ const CancelTradeModal = ({ visible, onClose, onConfirm }: CancelTradeModalProps
                             {isSeleted && <View className="h-2.5 w-2.5 rounded-full bg-primary" />}
                           </View>
                           <Text
-                            className={`font-body text-sm ${isSeleted ? 'text-foreground' : 'text-muted-foreground'}`}
+                            className={`font-body text-sm font-medium ${isSeleted ? 'text-foreground' : 'text-muted-foreground'}`}
                           >
                             {reason}
                           </Text>
@@ -134,7 +132,7 @@ const CancelTradeModal = ({ visible, onClose, onConfirm }: CancelTradeModalProps
 
                   {/* Conditional "Other" Text Input */}
                   {selectedReason === 'Other' && (
-                    <View className="mb-4">
+                    <View className="mb-2">
                       <TextInput
                         value={customReason}
                         onChangeText={setCustomReason}
@@ -143,7 +141,7 @@ const CancelTradeModal = ({ visible, onClose, onConfirm }: CancelTradeModalProps
                         multiline
                         numberOfLines={3}
                         textAlignVertical="top"
-                        className={`rounded-sm border-2 bg-muted px-4 py-3 font-body text-sm text-foreground focus:outline-none ${isReasonOverLimit ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-primary'}`}
+                        className={`min-h-[80px] rounded-sm border-2 bg-muted px-4 py-3 font-body text-sm text-foreground focus:outline-none ${isReasonOverLimit ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-primary'}`}
                       />
                       <Text
                         className={`mt-1 text-right font-technical text-[10px] uppercase tracking-wider ${isReasonOverLimit ? 'font-bold text-red-500' : 'text-muted-foreground'}`}
@@ -161,22 +159,20 @@ const CancelTradeModal = ({ visible, onClose, onConfirm }: CancelTradeModalProps
                     disabled={isSubmitting}
                     className="flex-1 items-center justify-center rounded-sm border-2 border-border bg-card py-3 active:opacity-70"
                   >
-                    <Text className="font-technical text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Return
+                    <Text className="font-body text-sm font-bold text-muted-foreground">
+                      Go Back
                     </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     onPress={handleConfirm}
                     disabled={isConfirmDisabled}
-                    className={`flex-1 items-center justify-center rounded-sm border-2 py-3 transition-opacity ${isConfirmDisabled ? 'border-red-500/70 bg-red-500/70' : 'border-red-600 bg-red-600 active:opacity-80'}`}
+                    className={`flex-1 items-center justify-center rounded-sm border-2 py-3 shadow-sm transition-opacity ${isConfirmDisabled ? 'border-red-500 bg-red-400 opacity-70 dark:border-red-800/50 dark:bg-red-900/50' : 'border-red-600 bg-red-500 active:opacity-80'}`}
                   >
                     {isSubmitting ? (
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
-                      <Text className="font-technical text-xs font-bold uppercase tracking-wider text-white">
-                        Confirm Abort
-                      </Text>
+                      <Text className="font-body text-sm font-bold text-white">Cancel Swap</Text>
                     )}
                   </TouchableOpacity>
                 </View>

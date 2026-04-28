@@ -419,20 +419,20 @@ const AccountEditScreen = () => {
 
         {/* Danger Zone */}
         <View className="mb-8">
-          <Text className="text-destructive mb-4 font-technical text-xs uppercase tracking-wider">
+          <Text className="mb-4 font-technical text-xs uppercase tracking-wider text-destructive">
             Danger Zone
           </Text>
           <TouchableOpacity
             onPress={() => setShowDeleteConfirm(true)}
-            className="border-destructive w-full flex-row items-center justify-between rounded-sm border-2 bg-card p-4 active:opacity-80"
+            className="w-full flex-row items-center justify-between rounded-sm border-2 border-destructive bg-card p-4 active:opacity-80"
           >
             <View className="flex-row items-center gap-3">
-              <View className="border-destructive h-10 w-10 items-center justify-center rounded-sm border-2 bg-background">
+              <View className="h-10 w-10 items-center justify-center rounded-sm border-2 border-destructive bg-background">
                 <Ionicons name="trash" size={20} color="#ef4444" />
               </View>
               <View>
-                <Text className="text-destructive font-body font-bold">Delete Account</Text>
-                <Text className="text-destructive mt-0.5 font-body text-xs opacity-80">
+                <Text className="font-body font-bold text-destructive">Delete Account</Text>
+                <Text className="mt-0.5 font-body text-xs text-destructive opacity-80">
                   Permanently delete your account
                 </Text>
               </View>
@@ -475,7 +475,7 @@ const AccountEditScreen = () => {
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         visible={showDeleteConfirm}
-        title="Delete_Account"
+        title="Delete Account"
         message="Are you absolutely sure? This action cannot be undone. This will permanently delete your account, and remove all your skills, trades, and messages from our servers."
         confirmText="Delete Forever"
         cancelText="Cancel"

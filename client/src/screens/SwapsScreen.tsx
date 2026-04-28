@@ -822,7 +822,7 @@ const SwapsScreen = () => {
                         receivingDesc: snapSelected.receivingDesc,
                       });
                     }}
-                    className="w-full flex-row items-center justify-center gap-2 rounded-sm bg-primary py-4 shadow-sm active:opacity-80"
+                    className="w-full flex-row items-center justify-center gap-2 rounded-sm border-2 border-indigo-800 bg-primary py-3 shadow-sm active:opacity-80"
                   >
                     <Ionicons name="chatbubble" size={16} color="#FFFFFF" />
                     <Text className="font-body text-sm font-bold uppercase tracking-wider text-white">
@@ -863,7 +863,7 @@ const SwapsScreen = () => {
                           setCancelModalConfig({ visible: true, swapId: selectedSwap.id });
                           setSelectedSwap(null);
                         }}
-                        className="border-solidborder-red-700 w-full flex-row items-center justify-center gap-2 rounded-sm border-2 bg-red-600 py-3 active:border-red-400 active:bg-red-300 dark:border-red-800 dark:bg-red-700 dark:active:border-red-700 dark:active:bg-red-600"
+                        className="border-solidborder-red-700 w-full flex-row items-center justify-center gap-2 rounded-sm border-2 border-red-700 bg-red-600 py-3 active:border-red-400 active:bg-red-300 dark:border-red-800 dark:bg-red-700 dark:active:border-red-700 dark:active:bg-red-600"
                       >
                         <Ionicons name="warning-outline" size={16} color="#FFFFFF" />
                         <Text className="font-body text-xs font-bold uppercase tracking-wider  text-white">

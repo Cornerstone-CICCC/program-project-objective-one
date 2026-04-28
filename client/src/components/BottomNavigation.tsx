@@ -1,17 +1,25 @@
-import { TouchableOpacity, View, Text } from 'react-native';
+import { TouchableOpacity, View, Text, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import { getConversations } from '../api/message';
 import { socketService } from '../sockets/socket';
+import { getMyNotifications } from '../api/notification';
 
 const BottomNavigation = ({ state, navigation }: any) => {
   const insets = useSafeAreaInsets();
+
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const activeColor = isDark ? '#A5B4FC' : '#4F46E5';
+  const inactiveColor = '#64748B';
+
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
 
   const currentRouteName = state.routes[state.index].name;
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadData = async () => {
     try {
       const conversations = await getConversations();
       const total = conversations.reduce(
@@ -19,13 +27,17 @@ const BottomNavigation = ({ state, navigation }: any) => {
         0,
       );
       setUnreadCount(total);
+
+      const notifs = await getMyNotifications();
+      const unreadExists = notifs.some((n: any) => !n.is_read);
+      setHasUnreadNotifs(unreadExists);
     } catch (err) {
       console.error('Failed to fetch unread count:', err);
     }
   };
 
   useEffect(() => {
-    fetchUnreadCount();
+    fetchUnreadData();
   }, [currentRouteName]);
 
   useEffect(() => {
@@ -33,13 +45,20 @@ const BottomNavigation = ({ state, navigation }: any) => {
     if (!socket) return;
 
     const handleNewMessage = () => {
-      fetchUnreadCount();
+      fetchUnreadData();
+    };
+    const handleNewNotification = () => {
+      fetchUnreadData();
     };
 
     socket.on('new_message', handleNewMessage);
+    socket.on('new_notification', handleNewNotification);
+    socket.on('swap_status_updated', handleNewNotification);
 
     return () => {
       socket.off('new_message', handleNewMessage);
+      socket.off('new_notification', handleNewNotification);
+      socket.off('swap_status_updated', handleNewNotification);
     };
   }, []);
 
@@ -48,9 +67,9 @@ const BottomNavigation = ({ state, navigation }: any) => {
       name: 'Economy',
       activeIcon: 'analytics',
       inactiveIcon: 'analytics-outline',
-      label: 'Economy',
+      label: 'Insights',
     },
-    { name: 'Search', activeIcon: 'search', inactiveIcon: 'search-outline', label: 'Search' },
+    { name: 'Search', activeIcon: 'search', inactiveIcon: 'search-outline', label: 'Discover' },
     {
       name: 'Swaps',
       activeIcon: 'swap-horizontal',
@@ -68,8 +87,8 @@ const BottomNavigation = ({ state, navigation }: any) => {
 
   return (
     <View
-      className="absolute bottom-0 left-0 right-0 z-50 flex-row justify-around border-t border-border bg-card pt-3 shadow-sm"
-      style={{ paddingBottom: insets.bottom }}
+      className="absolute bottom-0 left-0 right-0 z-50 flex-row justify-around border-t border-border bg-card pt-3 shadow-lg"
+      style={{ paddingBottom: Math.max(insets.bottom, 12) }}
     >
       {navItems.map(({ name, activeIcon, inactiveIcon, label }) => {
         const isActive = currentRouteName === name;
@@ -78,31 +97,36 @@ const BottomNavigation = ({ state, navigation }: any) => {
           <TouchableOpacity
             key={name}
             onPress={() => navigation.navigate(name)}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
             className="relative flex flex-1 flex-col items-center justify-center py-2"
           >
             {/* Icon */}
             <Ionicons
               name={isActive ? activeIcon : inactiveIcon}
               size={24}
-              color={isActive ? '#4F46E5' : '#64748B'}
+              color={isActive ? activeColor : inactiveColor}
               style={{ marginBottom: 4 }}
             />
 
             {/* Label */}
             <Text
-              className={`font-technical text-[10px] uppercase tracking-wider ${isActive ? 'font-medium text-primary' : 'text-muted-foreground'}`}
+              className={`font-body text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-primary dark:text-[#A5B4FC]' : 'text-muted-foreground'}`}
             >
               {label}
             </Text>
 
-            {/* Notification Badge */}
+            {/* Notification Badge For Inbox */}
             {name === 'Inbox' && unreadCount > 0 && (
-              <View className="absolute right-7 top-2 h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent px-1">
-                <Text className="text-center text-[10px] font-bold text-accent-foreground">
-                  {unreadCount}
+              <View className="absolute right-6 top-1 h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-card bg-red-500 px-1 shadow-sm">
+                <Text className="text-center font-body text-[10px] font-bold text-white">
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </Text>
               </View>
+            )}
+
+            {/* Notification Badge For Swaps */}
+            {name === 'Swaps' && hasUnreadNotifs && (
+              <View className="absolute right-7 top-1.5 h-3 w-3 rounded-full border-2 border-card bg-red-500 shadow-sm" />
             )}
           </TouchableOpacity>
         );

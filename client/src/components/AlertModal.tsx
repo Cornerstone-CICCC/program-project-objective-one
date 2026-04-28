@@ -13,7 +13,7 @@ const AlertModal = ({
   visible,
   title,
   message,
-  buttonText = 'Acknowledge',
+  buttonText = 'Got it',
   variant = 'default',
   onClose,
 }: AlertModalProps) => {
@@ -21,15 +21,15 @@ const AlertModal = ({
     switch (variant) {
       case 'error':
         return {
-          title: 'text-red-500',
-          border: 'border-red-500/50',
-          button: 'bg-red-600',
+          title: 'text-red-600 dark:text-red-400',
+          border: 'border-red-200 dark:border-red-900/50',
+          button: 'bg-red-500',
         };
       case 'success':
         return {
-          title: 'text-green-500',
-          border: 'border-green-500/50',
-          button: 'bg-green-600',
+          title: 'text-emerald-600 dark:text-emerald-400',
+          border: 'border-emerald-200 dark:border-emerald-900/50',
+          button: 'bg-emerald-500',
         };
       default:
         return {
@@ -48,7 +48,9 @@ const AlertModal = ({
         <View
           className={`w-full max-w-sm rounded-sm border-2 border-solid bg-card p-6 shadow-xl ${theme.border}`}
         >
-          <Text className={`mb-2 font-technical text-lg uppercase tracking-wider ${theme.title}`}>
+          <Text
+            className={`mb-2 font-technical text-lg font-bold uppercase tracking-wider ${theme.title}`}
+          >
             {title}
           </Text>
 
@@ -58,11 +60,10 @@ const AlertModal = ({
 
           <TouchableOpacity
             onPress={onClose}
-            className={`w-full items-center justify-center rounded-sm py-3 active:opacity-80 ${theme.button}`}
+            activeOpacity={0.8}
+            className={`w-full items-center justify-center rounded-sm py-3 shadow-sm ${theme.button}`}
           >
-            <Text className="font-technical text-xs uppercase tracking-wider text-white">
-              {buttonText}
-            </Text>
+            <Text className="font-body text-sm font-bold text-white">{buttonText}</Text>
           </TouchableOpacity>
         </View>
       </View>
