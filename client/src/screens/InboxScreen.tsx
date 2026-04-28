@@ -7,11 +7,9 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
 import { getConversations } from '../api/message';
 import { socketService } from '../sockets/socket';
 import { hideTradeConversation } from '../api/trade';
@@ -41,10 +39,6 @@ interface IConversation {
 const InboxScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const [conversations, setConversations] = useState<IConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -193,7 +187,7 @@ const InboxScreen = () => {
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
         {isLoading ? (
           <View className="items-center justify-center py-12">
-            <ActivityIndicator size="large" color={primaryIconColor} />
+            <ActivityIndicator size="large" color="#4F46E5" />
             <Text className="mt-4 font-technical text-sm uppercase tracking-wider text-muted-foreground">
               Loading Inbox...
             </Text>
@@ -221,7 +215,7 @@ const InboxScreen = () => {
                       partnerName: conversation.partnerName,
                     });
                   }}
-                  className="bg-destructive w-20 items-center justify-center"
+                  className="w-20 items-center justify-center bg-destructive"
                 >
                   <Ionicons name="archive" size={24} color="#FFFFFF" />
                   <Text className="mt-1 font-body text-[10px] font-bold uppercase tracking-wider text-white">
@@ -318,7 +312,7 @@ const InboxScreen = () => {
                               className="flex-row items-center gap-1.5 rounded-sm border border-border bg-muted px-3 py-1.5 transition-colors hover:border-red-200 hover:bg-red-50 dark:hover:border-red-900/50 dark:hover:bg-red-900/20"
                             >
                               <Ionicons name="archive-outline" size={18} color="#EF4444" />
-                              <Text className="text-destructive font-technical text-[10px] font-bold uppercase tracking-wider">
+                              <Text className="font-technical text-[10px] font-bold uppercase tracking-wider text-destructive">
                                 Hide
                               </Text>
                             </TouchableOpacity>

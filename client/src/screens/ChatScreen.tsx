@@ -15,7 +15,6 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  useColorScheme,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,10 +46,6 @@ const ChatScreen = () => {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const scrollViewRef = useRef<ScrollView>(null);
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const {
     tradeId,
@@ -323,7 +318,11 @@ const ChatScreen = () => {
               onPress={() => setIsTradeInfoVisible(true)}
               className="rounded-sm p-1 active:bg-muted"
             >
-              <Ionicons name="information-circle-outline" size={24} color={primaryIconColor} />
+              <Ionicons
+                name="information-circle-outline"
+                size={24}
+                className="text-primary dark:text-[#A5B4FC]"
+              />
             </TouchableOpacity>
 
             {isTradeActive && (
@@ -345,7 +344,11 @@ const ChatScreen = () => {
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-1 flex-row items-center gap-2">
-              <Ionicons name="swap-horizontal" size={16} color={primaryIconColor} />
+              <Ionicons
+                name="swap-horizontal"
+                size={16}
+                className="text-primary dark:text-[#A5B4FC]"
+              />
               <Text
                 className="font-technical text-xs font-medium text-primary dark:text-[#A5B4FC]"
                 numberOfLines={1}
@@ -401,7 +404,7 @@ const ChatScreen = () => {
       <View className="relative flex-1 bg-muted">
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={primaryIconColor} />
+            <ActivityIndicator size="large" color="#4F46E5" />
           </View>
         ) : (
           <ScrollView
@@ -506,7 +509,11 @@ const ChatScreen = () => {
                           onPress={() => handleStartEdit(message._id, message.content)}
                           className="flex-row items-center rounded-full px-2 py-1 active:bg-muted"
                         >
-                          <Ionicons name="pencil" size={14} color={primaryIconColor} />
+                          <Ionicons
+                            name="pencil"
+                            size={14}
+                            className="text-primary dark:text-[#A5B4FC]"
+                          />
                         </TouchableOpacity>
 
                         <View className="h-3 w-[1px] bg-border" />
@@ -555,7 +562,7 @@ const ChatScreen = () => {
             {editingMessageId && (
               <View className="flex-row items-center justify-between border-b border-border bg-muted px-4 py-2">
                 <View className="flex-row items-center gap-2">
-                  <Ionicons name="pencil" size={14} color={primaryIconColor} />
+                  <Ionicons name="pencil" size={14} className="text-primary dark:text-[#A5B4FC]" />
                   <Text className="font-technical text-xs uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
                     Editing Message
                   </Text>
@@ -697,7 +704,7 @@ const ChatScreen = () => {
                 className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted"
               >
                 <Ionicons name="warning" size={18} color="#EF4444" />
-                <Text className="text-destructive font-technical text-xs font-bold uppercase">
+                <Text className="font-technical text-xs font-bold uppercase text-destructive">
                   Cancel Swap
                 </Text>
               </TouchableOpacity>

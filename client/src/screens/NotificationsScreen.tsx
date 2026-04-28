@@ -7,7 +7,6 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,10 +44,6 @@ interface INotification {
 const NotificationsScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -156,19 +151,43 @@ const NotificationsScreen = () => {
   const getNotificationConfig = (type: NotificationType) => {
     switch (type) {
       case 'SWAP_REQUESTED':
-        return { icon: 'swap-horizontal', color: isDark ? '#818CF8' : '#4F46E5' }; // Indigo
+        return {
+          icon: 'swap-horizontal',
+          textClass: 'text-indigo-600 dark:text-indigo-400',
+          borderClass: 'border-indigo-600 dark:border-indigo-400',
+        };
       case 'SWAP_ACCEPTED':
       case 'SWAP_COMPLETED':
-        return { icon: 'checkmark-done-circle', color: isDark ? '#34D399' : '#10B981' }; // Emerald
+        return {
+          icon: 'checkmark-done-circle',
+          textClass: 'text-emerald-500 dark:text-emerald-400',
+          borderClass: 'border-emerald-500 dark:border-emerald-400',
+        };
       case 'PARTNER_COMPLETED':
-        return { icon: 'time', color: isDark ? '#FBBF24' : '#D97706' }; // Amber
+        return {
+          icon: 'time',
+          textClass: 'text-amber-600 dark:text-amber-400',
+          borderClass: 'border-amber-600 dark:border-amber-400',
+        };
       case 'SWAP_CANCELLED':
-        return { icon: 'close-circle', color: isDark ? '#F87171' : '#DC2626' }; // Red
+        return {
+          icon: 'close-circle',
+          textClass: 'text-red-600 dark:text-red-400',
+          borderClass: 'border-red-600 dark:border-red-400',
+        };
       case 'NEW_EVALUATION':
-        return { icon: 'star', color: isDark ? '#FBBF24' : '#D97706' }; // Amber
+        return {
+          icon: 'star',
+          textClass: 'text-amber-600 dark:text-amber-400',
+          borderClass: 'border-amber-600 dark:border-amber-400',
+        };
       case 'SYSTEM_ALERT':
       default:
-        return { icon: 'hardware-chip', color: isDark ? '#94A3B8' : '#64748B' }; // Slate
+        return {
+          icon: 'hardware-chip',
+          textClass: 'text-slate-500 dark:text-slate-400',
+          borderClass: 'border-slate-500 dark:border-slate-400',
+        };
     }
   };
 
@@ -280,7 +299,7 @@ const NotificationsScreen = () => {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background px-6">
-        <ActivityIndicator size="large" color={primaryIconColor} />
+        <ActivityIndicator size="large" color="#4F46E5" />
         <Text className="mt-4 text-center font-technical text-sm uppercase tracking-wider text-muted-foreground">
           Loading Notifications...
         </Text>
@@ -313,7 +332,11 @@ const NotificationsScreen = () => {
               onPress={handleMarkAllRead}
               className="flex-row items-center gap-1.5 rounded-full border-2 border-border bg-muted px-3 py-1.5 active:opacity-70"
             >
-              <Ionicons name="checkmark-done" size={14} color={primaryIconColor} />
+              <Ionicons
+                name="checkmark-done"
+                size={14}
+                className="text-primary dark:text-[#A5B4FC]"
+              />
               <Text className="font-technical text-[10px] font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
                 Mark All Read
               </Text>
@@ -324,7 +347,7 @@ const NotificationsScreen = () => {
               className="flex-row items-center gap-1.5 rounded-full border-2 border-red-200 bg-red-50 px-3 py-1.5 active:opacity-70 dark:border-red-900/50 dark:bg-red-900/20"
             >
               <Ionicons name="trash-outline" size={14} color="#EF4444" />
-              <Text className="text-destructive font-technical text-[10px] font-bold uppercase tracking-wider">
+              <Text className="font-technical text-[10px] font-bold uppercase tracking-wider text-destructive">
                 Clear Read
               </Text>
             </TouchableOpacity>
@@ -361,7 +384,7 @@ const NotificationsScreen = () => {
                     setSelectedNotifId(notification._id);
                     setDeleteConfirmVisible(true);
                   }}
-                  className="bg-destructive w-20 items-center justify-center rounded-r-sm"
+                  className="w-20 items-center justify-center rounded-r-sm bg-destructive"
                 >
                   <Ionicons name="trash" size={24} color="#FFFFFF" />
                   <Text className="mt-1 font-body text-[10px] font-bold uppercase tracking-wider text-white">
@@ -378,13 +401,12 @@ const NotificationsScreen = () => {
                 >
                   {/* Icon Badge */}
                   <View
-                    className="items-center justify-center rounded-sm border-2 border-solid bg-muted p-2"
-                    style={{ borderColor: isUnread ? config.color : '#CBD5E1' }}
+                    className={`items-center justify-center rounded-sm border-2 border-solid bg-muted p-2 ${isUnread ? config.borderClass : 'border-border'}`}
                   >
                     <Ionicons
                       name={config.icon as any}
                       size={20}
-                      color={isUnread ? config.color : '#64748B'}
+                      className={isUnread ? config.textClass : 'text-muted-foreground'}
                     />
                   </View>
 
@@ -393,7 +415,7 @@ const NotificationsScreen = () => {
                     <View className="mb-1 flex-row items-center justify-between">
                       <Text
                         className={`flex-1 font-technical text-sm font-bold tracking-wider ${isUnread ? 'text-foreground' : 'text-muted-foreground'}`}
-                        style={{ color: isUnread ? config.color : '#64748B' }}
+                        style={{ color: isUnread ? config.textClass : '#64748B' }}
                       >
                         {title}
                       </Text>
@@ -423,7 +445,7 @@ const NotificationsScreen = () => {
                       className="ml-2 flex-row items-center gap-1.5 rounded-sm border-2 border-border bg-muted px-3 py-1.5 transition-colors hover:border-red-200 hover:bg-red-50 dark:hover:border-red-900/50 dark:hover:bg-red-900/20"
                     >
                       <Ionicons name="trash-outline" size={14} color="#EF4444" />
-                      <Text className="text-destructive font-body text-[10px] font-bold uppercase tracking-wider">
+                      <Text className="font-body text-[10px] font-bold uppercase tracking-wider text-destructive">
                         Delete
                       </Text>
                     </TouchableOpacity>

@@ -13,7 +13,6 @@ import {
   TextInput,
   TouchableOpacity,
   UIManager,
-  useColorScheme,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,10 +45,6 @@ export interface IUserSkillUI {
 const ProfileEditScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const { user, setAuth } = useAuthStore();
 
@@ -601,7 +596,7 @@ const ProfileEditScreen = () => {
               placeholderTextColor="#64748B"
             />
             <Text
-              className={`mt-2 text-right font-technical text-[10px] uppercase tracking-wider ${isBioOverLimit ? 'text-destructive font-bold' : 'text-muted-foreground'}`}
+              className={`mt-2 text-right font-technical text-[10px] uppercase tracking-wider ${isBioOverLimit ? 'font-bold text-destructive' : 'text-muted-foreground'}`}
             >
               {bio.length}/300 Characters
             </Text>
@@ -625,10 +620,14 @@ const ProfileEditScreen = () => {
                 className="flex-row items-center gap-2 rounded bg-muted px-3 py-1.5 active:opacity-80"
               >
                 {isLocating ? (
-                  <ActivityIndicator size="small" color={primaryIconColor} />
+                  <ActivityIndicator size="small" color="#4F46E5" />
                 ) : (
                   <>
-                    <Ionicons name="navigate-outline" size={14} color={primaryIconColor} />
+                    <Ionicons
+                      name="navigate-outline"
+                      size={14}
+                      className="text-primary dark:text-[#A5B4FC]"
+                    />
                     <Text className="font-technical text-[10px] font-bold uppercase text-primary dark:text-[#A5B4FC]">
                       Auto-Locate
                     </Text>
@@ -839,7 +838,7 @@ const ProfileEditScreen = () => {
 
             {/* Result List */}
             {isLoadingSkills ? (
-              <ActivityIndicator color={primaryIconColor} size="large" className="mt-10" />
+              <ActivityIndicator color="#4F46E5" size="large" className="mt-10" />
             ) : searchQuery ? (
               <FlatList
                 data={filteredSkills}

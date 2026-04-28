@@ -7,7 +7,6 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,10 +17,6 @@ import { getNetworkPulse } from '../api/network';
 const SkillEconomyScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const { user } = useAuthStore();
 
@@ -88,7 +83,7 @@ const SkillEconomyScreen = () => {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color={primaryIconColor} />
+        <ActivityIndicator size="large" color="#4F46E5" />
         <Text className="mt-4 font-technical text-sm uppercase tracking-widest text-muted-foreground">
           Loading Market Data...
         </Text>
@@ -132,8 +127,8 @@ const SkillEconomyScreen = () => {
         <RefreshControl
           refreshing={isRefreshing}
           onRefresh={onRefresh}
-          tintColor={primaryIconColor}
-          colors={[primaryIconColor as string]}
+          tintColor="#4F46E5"
+          colors={['#4F46E5']}
         />
       }
     >
@@ -156,9 +151,9 @@ const SkillEconomyScreen = () => {
             className={`ml-4 rounded-full border-2 border-border bg-card p-3 shadow-sm ${isRefreshing ? 'opacity-50' : 'active:bg-muted'}`}
           >
             {isRefreshing ? (
-              <ActivityIndicator size="small" color={primaryIconColor} />
+              <ActivityIndicator size="small" color="#4F46E5" />
             ) : (
-              <Ionicons name="sync" size={20} color={primaryIconColor} />
+              <Ionicons name="sync" size={20} className="text-primary dark:text-[#A5B4FC]" />
             )}
           </TouchableOpacity>
         )}
@@ -167,14 +162,14 @@ const SkillEconomyScreen = () => {
       {/* Network Pulse */}
       <View className="mb-8">
         <View className="mb-4 flex-row items-center gap-2">
-          <Ionicons name="analytics" size={20} color={primaryIconColor} />
+          <Ionicons name="analytics" size={20} className="text-primary dark:text-[#A5B4FC]" />
           <Text className="font-body text-sm font-bold uppercase tracking-wider text-foreground">
             Network Stats
           </Text>
         </View>
         <View className="flex-row justify-between gap-3">
           <View className="flex-1 items-center rounded-sm border-2 border-border bg-card p-4 shadow-sm">
-            <Text className="mb-1 font-technical text-2xl font-bold text-foreground">
+            <Text className="mb-1 font-technical text-2xl font-bold text-primary dark:text-[#A5B4FC]">
               {pulseData.networkStats.activeSwapsThisWeek}
             </Text>
             <Text className="text-center font-body text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -190,7 +185,7 @@ const SkillEconomyScreen = () => {
             </Text>
           </View>
           <View className="flex-1 items-center justify-center rounded-sm border-2 border-border bg-card p-4 shadow-sm">
-            <Text className="mb-1 font-technical text-2xl font-bold text-foreground">
+            <Text className="mb-1 font-technical text-2xl font-bold text-primary dark:text-[#A5B4FC]">
               {pulseData.networkStats.totalSkillsInCirculation}
             </Text>
             <Text className="text-center font-body text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -290,7 +285,7 @@ const SkillEconomyScreen = () => {
       {/* Trending Nodes */}
       <View className="mb-8">
         <View className="mb-4 flex-row items-center gap-2">
-          <Ionicons name="trending-up" size={20} color={primaryIconColor} />
+          <Ionicons name="trending-up" size={20} className="text-primary dark:text-[#A5B4FC]" />
           <Text className="font-body text-sm font-bold uppercase tracking-wider text-foreground">
             Trending Skills
           </Text>
@@ -312,8 +307,12 @@ const SkillEconomyScreen = () => {
                 </Text>
 
                 <View className="mb-4 flex-row items-center gap-1 self-start rounded-sm bg-emerald-50 px-2 py-1 dark:bg-emerald-900/40">
-                  <Ionicons name="trending-up" size={10} color={isDark ? '#34D399' : '#059669'} />
-                  <Text className="font-technical text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                  <Ionicons
+                    name="trending-up"
+                    size={15}
+                    className="text-[#059669] dark:text-[#34D399]"
+                  />
+                  <Text className="font-technical text-[15px] font-bold text-emerald-700 dark:text-emerald-400">
                     +{skill.trend}%
                   </Text>
                 </View>
@@ -348,7 +347,7 @@ const SkillEconomyScreen = () => {
       {/* Personal Portfolio Valuation */}
       <View className="mb-8">
         <View className="mb-4 flex-row items-center gap-2">
-          <Ionicons name="person" size={20} color={primaryIconColor} />
+          <Ionicons name="person" size={20} className="text-primary dark:text-[#A5B4FC]" />
           <Text className="font-body text-sm font-bold uppercase tracking-wider text-foreground">
             Your Profile
           </Text>
@@ -356,7 +355,7 @@ const SkillEconomyScreen = () => {
         <View className="rounded-sm border-2 border-border bg-card p-5 shadow-sm">
           <View className="mb-5 flex-row items-start gap-4">
             <View className="h-10 w-10 flex-shrink-0 items-center justify-center rounded-sm bg-indigo-50 dark:bg-indigo-900/40">
-              <Ionicons name="star" size={20} color={primaryIconColor} />
+              <Ionicons name="star" size={20} className="text-primary dark:text-[#A5B4FC]" />
             </View>
             <View className="flex-1">
               <Text className="mb-2 font-body text-base leading-relaxed text-foreground">

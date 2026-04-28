@@ -13,7 +13,6 @@ import {
   TextInput,
   TouchableOpacity,
   UIManager,
-  useColorScheme,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,10 +29,6 @@ const SearchScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
@@ -229,7 +224,7 @@ const SearchScreen = () => {
               <Ionicons
                 name={refreshing ? 'sync' : 'refresh'}
                 size={14}
-                color={refreshing ? '#64748B' : primaryIconColor}
+                className={refreshing ? 'text-[#64748B]' : 'text-primary dark:text-[#A5B4FC]'}
               />
               <Text
                 className={`font-body text-xs font-bold uppercase ${refreshing ? 'text-muted-foreground' : 'text-primary dark:text-[#A5B4FC]'}`}
@@ -270,7 +265,9 @@ const SearchScreen = () => {
             <Ionicons
               name="options-outline"
               size={24}
-              color={selectedSkills.length > 0 ? primaryIconColor : '#64748B'}
+              className={
+                selectedSkills.length > 0 ? 'text-primary dark:text-[#A5B4FC]' : 'text-[#64748B]'
+              }
             />
 
             {selectedSkills.length > 0 && (
@@ -293,8 +290,8 @@ const SearchScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={primaryIconColor}
-              colors={[primaryIconColor as string]}
+              tintColor="#4F46E5"
+              colors={['4F46E5']}
             />
           ) : undefined
         }
@@ -303,7 +300,7 @@ const SearchScreen = () => {
           {/* Dynamic Header */}
           <View className="mb-4 flex-row items-center gap-2">
             <View className="flex-row items-center gap-2">
-              <Ionicons name={listIcon} size={18} color={primaryIconColor} />
+              <Ionicons name={listIcon} size={18} className="text-primary dark:text-[#A5B4FC]" />
               <Text className="font-body text-sm font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
                 {listTitle}
               </Text>
@@ -316,7 +313,7 @@ const SearchScreen = () => {
           {/* Loading States */}
           {isAnalyzing || isLoadingUsers ? (
             <View className="mb-8 items-center justify-center rounded-sm border-2 border-dashed border-primary py-8">
-              <ActivityIndicator size="large" color={primaryIconColor} />
+              <ActivityIndicator size="large" color="#4F46E5" />
               <Text className="mt-4 font-body text-sm font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
                 Scanning Network...
               </Text>
@@ -431,8 +428,7 @@ const SearchScreen = () => {
                         <Ionicons
                           name="sparkles"
                           size={14}
-                          color={primaryIconColor}
-                          style={{ marginTop: 2 }}
+                          className="mt-2 text-primary dark:text-[#A5B4FC]"
                         />
                         <View className="flex-1">
                           <Text
@@ -493,7 +489,7 @@ const SearchScreen = () => {
                   onPress={() => setSelectedSkills([])}
                   className="rounded-sm border-2 border-red-200 bg-red-50 p-2 dark:border-red-900/50  dark:bg-red-900/20"
                 >
-                  <Text className="text-destructive font-body text-xs font-bold uppercase">
+                  <Text className="font-body text-xs font-bold uppercase text-destructive">
                     Clear All
                   </Text>
                 </TouchableOpacity>
@@ -508,7 +504,7 @@ const SearchScreen = () => {
             >
               {isLoadingSkills ? (
                 <View className="items-center justify-center py-12">
-                  <ActivityIndicator size="large" color={primaryIconColor} />
+                  <ActivityIndicator size="large" color="#4F46E5" />
                   <Text className="mt-4 font-technical text-sm font-medium uppercase text-muted-foreground">
                     Loading Categories...
                   </Text>
