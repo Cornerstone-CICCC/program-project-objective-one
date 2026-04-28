@@ -15,6 +15,7 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  useColorScheme,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,6 +47,10 @@ const ChatScreen = () => {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const {
     tradeId,
@@ -227,22 +232,24 @@ const ChatScreen = () => {
   const getBadgeColor = (proficiency: string) => {
     switch (proficiency?.toUpperCase()) {
       case 'EXPERT':
-        return 'text-purple-500 border-purple-500';
+        return 'bg-purple-500 text-white border-transparent';
       case 'ADVANCED':
-        return 'text-green-500 border-green-500';
+        return 'bg-green-500 text-white border-transparent';
       case 'INTERMEDIATE':
-        return 'text-yellow-500 border-yellow-500';
+        return 'bg-yellow-500 text-[#0F172A] border-transparent';
       default:
-        return 'text-blue-500 border-blue-500';
+        return 'bg-blue-500 text-white border-transparent';
     }
   };
 
   if (!tradeId) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <Text className="mb-2 font-technical uppercase text-muted-foreground">Chat_Not_Found</Text>
+        <Text className="mb-2 font-technical uppercase text-muted-foreground">Chat Not Found</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text className="font-body text-primary underline">Close Channel</Text>
+          <Text className="font-body text-primary underline dark:text-[#A5B4FC]">
+            Close Channel
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -251,12 +258,12 @@ const ChatScreen = () => {
   const getTradeStatusConfig = (status: string) => {
     switch (status?.toUpperCase()) {
       case 'COMPLETED':
-        return { bg: 'bg-green-600', icon: 'checkmark-circle', text: 'COMPLETED' };
+        return { bg: 'bg-emerald-600', icon: 'checkmark-circle', text: 'COMPLETED' };
       case 'CANCELLED':
       case 'REJECTED':
         return { bg: 'bg-red-600', icon: 'close-circle', text: 'TERMINATED' };
       default:
-        return { bg: 'bg-accent', icon: 'time-outline', text: 'IN_PROGRESS' };
+        return { bg: 'bg-primary', icon: 'time-outline', text: 'IN_PROGRESS' };
     }
   };
 
@@ -287,7 +294,7 @@ const ChatScreen = () => {
 
             <Image
               source={{ uri: partnerAvatar || 'https://placehold.co/150' }}
-              className="h-10 w-10 rounded-sm border-2 border-solid border-muted-foreground bg-muted"
+              className="h-10 w-10 rounded-sm border-2 border-muted-foreground bg-muted"
             />
 
             <View>
@@ -295,14 +302,8 @@ const ChatScreen = () => {
                 {partnerName || 'Swap Partner'}
               </Text>
               <View className="mt-1 flex-row items-center gap-1.5">
-                <View
-                  className={`h-2 w-2 rounded-full bg-green-500`}
-                  //  ${partner.isOnline ? 'bg-green-500' : 'bg-gray-400'}
-                />
-                <Text className="font-technical text-xs uppercase text-muted-foreground">
-                  {/* {partner.isOnline ? 'Active_Now' : 'Offline'} */}
-                  Connected
-                </Text>
+                <Ionicons name="link" size={12} color="#64748B" />
+                <Text className="font-body text-xs text-muted-foreground">Matched</Text>
               </View>
             </View>
           </View>
@@ -311,8 +312,8 @@ const ChatScreen = () => {
             <View
               className={`flex-row items-center gap-1.5 rounded-sm bg-accent px-3 py-1 ${statusConfig.bg}`}
             >
-              <Ionicons name={statusConfig.icon as any} size={16} color="#FFFFFF" />
-              <Text className="font-technical text-[10px] font-bold uppercase tracking-wider text-white">
+              <Ionicons name={statusConfig.icon as any} size={14} color="#FFFFFF" />
+              <Text className="font-technical text-xs font-bold text-white">
                 {statusConfig.text}
               </Text>
             </View>
@@ -322,7 +323,7 @@ const ChatScreen = () => {
               onPress={() => setIsTradeInfoVisible(true)}
               className="rounded-sm p-1 active:bg-muted"
             >
-              <Ionicons name="information-circle-outline" size={24} color="#4F46E5" />
+              <Ionicons name="information-circle-outline" size={24} color={primaryIconColor} />
             </TouchableOpacity>
 
             {isTradeActive && (
@@ -340,16 +341,17 @@ const ChatScreen = () => {
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => setIsContextExpanded(!isContextExpanded)}
-          className="mt-2 rounded-sm border-l-4 border-[#4F46E5] bg-muted px-3 py-2"
+          className="mt-2 rounded-sm border-l-4 border-primary bg-muted px-3 py-2"
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-1 flex-row items-center gap-2">
-              <Ionicons name="swap-horizontal" size={16} color="#4F46E5" />
+              <Ionicons name="swap-horizontal" size={16} color={primaryIconColor} />
               <Text
-                className="font-technical text-[10px] uppercase tracking-wider text-primary"
+                className="font-technical text-xs font-medium text-primary dark:text-[#A5B4FC]"
                 numberOfLines={1}
               >
-                {offering || 'Unknown'} <Text className="uppercase text-muted-foreground">For</Text>{' '}
+                {offering || 'Unknown'}{' '}
+                <Text className="font-normal text-muted-foreground">For</Text>{' '}
                 {receiving || 'Unknown'}
               </Text>
             </View>
@@ -363,29 +365,29 @@ const ChatScreen = () => {
           {isContextExpanded && (
             <View className="mt-3 border-t border-border pt-3">
               <View className="mb-2 flex-row justify-between">
-                <Text className="font-technical text-[10px] uppercase text-muted-foreground">
-                  Trade_ID:
+                <Text className="font-technical text-xs font-medium text-muted-foreground">
+                  Swap ID:
                 </Text>
-                <Text className="font-technical text-[10px] uppercase text-foreground">
-                  {tradeId.slice(-6)}
+                <Text className="font-body text-xs text-foreground">
+                  {tradeId.slice(-6).toUpperCase()}
                 </Text>
               </View>
 
               <View className="mb-2 flex-row justify-between">
-                <Text className="font-technical text-[10px] uppercase text-muted-foreground">
+                <Text className="font-technical text-xs font-medium text-muted-foreground">
                   Location / Platform:
                 </Text>
-                <Text className="font-body text-[10px] text-foreground">
+                <Text className="font-body text-xs text-foreground">
                   {route.params?.proposedLocation || 'Remote / TBD'}
                 </Text>
               </View>
 
               {route.params?.tradeMessage && (
                 <View className="mt-1">
-                  <Text className="mb-1 font-technical text-[10px] uppercase text-muted-foreground">
-                    Initial Transmission:
+                  <Text className="mb-1 font-technical text-xs font-medium text-muted-foreground">
+                    Initial Message:
                   </Text>
-                  <Text className="font-body text-[10px] italic text-muted-foreground">
+                  <Text className="font-body text-xs italic text-muted-foreground">
                     {route.params.tradeMessage}
                   </Text>
                 </View>
@@ -399,7 +401,7 @@ const ChatScreen = () => {
       <View className="relative flex-1 bg-muted">
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#4F46E5" />
+            <ActivityIndicator size="large" color={primaryIconColor} />
           </View>
         ) : (
           <ScrollView
@@ -415,11 +417,11 @@ const ChatScreen = () => {
               {messages.length === 0 && isTradeActive && (
                 <View className="my-6 items-center justify-center">
                   <View className="max-w-[85%] rounded-sm border border-border bg-card px-4 py-3 shadow-sm">
-                    <Text className="text-center font-technical text-[10px] font-bold uppercase tracking-wider text-primary">
-                      [SYSTEM]: Swap Authorized
+                    <Text className="text-center font-technical text-sm font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+                      [SYSTEM]: Swap Started
                     </Text>
                     <Text className="mt-1 text-center font-body text-xs text-muted-foreground">
-                      The secure comm-link is now open. Say hello!
+                      You can now chat with your swap partner. Say hello!
                     </Text>
                   </View>
                 </View>
@@ -453,7 +455,7 @@ const ChatScreen = () => {
                   return (
                     <View key={message._id} className="my-6 items-center justify-center">
                       <View className="max-w-[85%] rounded-sm border border-border bg-card px-4 py-3 shadow-sm">
-                        <Text className="text-center font-technical text-[10px] font-bold uppercase tracking-wider text-primary">
+                        <Text className="text-center font-technical text-[10px] font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
                           {title}
                         </Text>
                         {body ? (
@@ -504,7 +506,7 @@ const ChatScreen = () => {
                           onPress={() => handleStartEdit(message._id, message.content)}
                           className="flex-row items-center rounded-full px-2 py-1 active:bg-muted"
                         >
-                          <Ionicons name="pencil" size={14} color="#4F46E5" />
+                          <Ionicons name="pencil" size={14} color={primaryIconColor} />
                         </TouchableOpacity>
 
                         <View className="h-3 w-[1px] bg-border" />
@@ -545,7 +547,7 @@ const ChatScreen = () => {
           <View className="items-center justify-center rounded-sm border border-border bg-muted py-4">
             <Ionicons name="lock-closed" size={16} color="#64748B" className="mb-1" />
             <Text className="font-technical text-xs uppercase text-muted-foreground">
-              Channel Locked: Trade is {currentTradeStatus}
+              Chat Locked: Trade is {currentTradeStatus}
             </Text>
           </View>
         ) : (
@@ -553,8 +555,8 @@ const ChatScreen = () => {
             {editingMessageId && (
               <View className="flex-row items-center justify-between border-b border-border bg-muted px-4 py-2">
                 <View className="flex-row items-center gap-2">
-                  <Ionicons name="pencil" size={14} color="#4F46E5" />
-                  <Text className="font-technical text-xs uppercase tracking-wider text-primary">
+                  <Ionicons name="pencil" size={14} color={primaryIconColor} />
+                  <Text className="font-technical text-xs uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
                     Editing Message
                   </Text>
                 </View>
@@ -573,12 +575,12 @@ const ChatScreen = () => {
                 blurOnSubmit={editingMessageId ? true : false}
                 placeholder="Type your message..."
                 placeholderTextColor="#64748B"
-                className={`flex-1 rounded-sm border-2 bg-muted px-4 py-3 font-body text-foreground focus:outline-none ${messageInput.length > 1000 ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-primary'}`}
+                className={`flex-1 rounded-sm border-2 bg-muted px-4 py-3 font-body text-foreground focus:outline-none ${messageInput.length > 1000 ? 'border-destructive focus:border-destructive' : 'border-border focus:border-primary'}`}
               />
               <TouchableOpacity
                 onPress={handleSendMessage}
                 disabled={!messageInput.trim() || messageInput.length > 1000}
-                className={`items-center justify-center rounded-sm px-6 ${!messageInput.trim() || messageInput.length > 1000 ? 'bg-primary opacity-50' : 'bg-primary active:opacity-80'}`}
+                className={`items-center justify-center rounded-sm px-6 ${!messageInput.trim() || messageInput.length > 1000 ? 'bg-slate-400 opacity-70 dark:bg-slate-600' : 'bg-primary active:opacity-70'}`}
               >
                 <Ionicons
                   name={editingMessageId ? 'checkmark' : 'send'}
@@ -610,16 +612,16 @@ const ChatScreen = () => {
             {/* Modal Header */}
             <View className="mb-4 flex-row items-center justify-between border-b border-border pb-4">
               <View>
-                <Text className="font-technical text-lg uppercase tracking-wider text-primary">
-                  Swap_Parameters
+                <Text className="font-technical text-lg uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+                  Swap Details
                 </Text>
                 <Text className="font-technical text-[10px] uppercase text-muted-foreground">
-                  Agreed Structural Guidelines
+                  Agreed Terms
                 </Text>
               </View>
               <TouchableOpacity
                 onPress={() => setIsTradeInfoVisible(false)}
-                className="active:opacity-70"
+                className="p-2 active:opacity-70"
               >
                 <Ionicons name="close" size={24} color="#64748B" />
               </TouchableOpacity>
@@ -645,7 +647,7 @@ const ChatScreen = () => {
                     )}
                   </View>
                   <Text className="mt-1 font-body text-sm leading-relaxed text-muted-foreground">
-                    {offeringDesc || 'No specific parameters were provided.'}
+                    {offeringDesc || 'No specific details provided.'}
                   </Text>
                 </View>
               </View>
@@ -669,7 +671,7 @@ const ChatScreen = () => {
                     )}
                   </View>
                   <Text className="mt-1 font-body text-sm leading-relaxed text-muted-foreground">
-                    {receivingDesc || 'No specific parameters were provided.'}
+                    {receivingDesc || 'No specific details provided.'}
                   </Text>
                 </View>
               </View>
@@ -695,8 +697,8 @@ const ChatScreen = () => {
                 className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted"
               >
                 <Ionicons name="warning" size={18} color="#EF4444" />
-                <Text className="font-technical text-xs font-bold uppercase text-red-500">
-                  Abort Swap
+                <Text className="text-destructive font-technical text-xs font-bold uppercase">
+                  Cancel Swap
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -715,8 +717,8 @@ const ChatScreen = () => {
 
       <ConfirmModal
         visible={deleteConfirmVisible}
-        title="Delete Transmission"
-        message="Are you sure you want to permanently erase this message? This action cannot be undone."
+        title="Delete Message"
+        message="Are you sure you want to permanently delete this message? This action cannot be undone."
         confirmText="Delete"
         cancelText="Cancel"
         isDestructive={true}

@@ -1,5 +1,6 @@
 import {
   ActivityIndicator,
+  FlatList,
   Image,
   Modal,
   ScrollView,
@@ -10,13 +11,13 @@ import {
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
 import { useAuthStore } from '../store/auth.store';
 import { useCallback, useEffect, useState } from 'react';
 import { IUser } from '../api/auth';
 import { getUserById } from '../api/user';
 import { getMySkills, getUserSkills } from '../api/userSkill';
 import { getMyTrades, getUserTrades } from '../api/trade';
+import { getUserReviews } from '../api/rating';
 
 export type Proficiency = 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
 
@@ -37,6 +38,23 @@ interface ITradeHistoryUI {
   receiving: string;
   status: string;
   updatedAt: string;
+}
+
+interface IReviewUI {
+  _id: string;
+  score: number;
+  comment: string;
+  createdAt: string;
+  reviewer_id: {
+    firstname: string;
+    lastname: string;
+    avatar_url: string;
+  };
+  trade_id?: {
+    offered_skill_id?: { name: string };
+    received_skill_id?: { name: string };
+    sought_skill_id?: { name: string };
+  };
 }
 
 const ProfileScreen = () => {
@@ -61,6 +79,10 @@ const ProfileScreen = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
+
+  const [isReviewsModalVisible, setIsReviewsModalVisible] = useState(false);
+  const [reviewsList, setReviewsList] = useState<IReviewUI[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({ title: 'SWAPPA' });
@@ -148,18 +170,25 @@ const ProfileScreen = () => {
     }, [isOwnProfile, routeUserId, currentUser?._id]),
   );
 
-  const getOfferingColor = (proficiency: Proficiency) => {
-    if (proficiency === 'Expert') return 'bg-purple-500 border-purple-600';
-    if (proficiency === 'Advanced') return 'bg-green-500 border-green-600';
-    if (proficiency === 'Intermediate') return 'bg-yellow-500 border-yellow-600';
-    return 'bg-blue-500 border-blue-600';
+  const handleOpenReviews = async () => {
+    if (!profileUser?._id) return;
+    setIsReviewsModalVisible(true);
+    setIsLoadingReviews(true);
+    try {
+      const data = await getUserReviews(profileUser._id);
+      setReviewsList(data);
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+    } finally {
+      setIsLoadingReviews(false);
+    }
   };
 
-  const getSeekingColor = (proficiency: Proficiency) => {
-    if (proficiency === 'Expert') return ' border-purple-600 text-purple-600';
-    if (proficiency === 'Advanced') return 'border-green-500 text-green-600';
-    if (proficiency === 'Intermediate') return 'border-yellow-500 text-yellow-600';
-    return 'border-primary text-primary';
+  const getBadgeStyle = (proficiency: Proficiency) => {
+    if (proficiency === 'Expert') return 'bg-purple-600 border-purple-700';
+    if (proficiency === 'Advanced') return 'bg-emerald-600 border-emerald-700';
+    if (proficiency === 'Intermediate') return 'bg-amber-600 border-amber-700';
+    return 'bg-blue-600 border-blue-700';
   };
 
   if (isLoading || !profileUser) {
@@ -167,7 +196,7 @@ const ProfileScreen = () => {
       <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" color="#1E40AF" />
         <Text className="mt-4 font-technical text-sm uppercase tracking-wider text-muted-foreground">
-          Retrieving Data...
+          Loading Profile...
         </Text>
       </View>
     );
@@ -184,7 +213,7 @@ const ProfileScreen = () => {
     <View className="flex-1 bg-background">
       {/* Header Container */}
       <View
-        className="border-b border-border bg-card px-6 pb-6"
+        className="border-b border-border bg-card px-4 pb-6"
         style={{ paddingTop: Math.max(insets.top, 24) }}
       >
         <View className="mb-6 flex-row items-center justify-between">
@@ -199,8 +228,8 @@ const ProfileScreen = () => {
             <View className="w-10" />
           )}
 
-          <Text className="flex-1 text-center font-technical text-xl uppercase tracking-wider text-foreground">
-            {isOwnProfile ? 'Swap_Profile' : 'Profile_View'}
+          <Text className="flex-1 text-center font-technical text-xl font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            {isOwnProfile ? 'My Profile' : 'Profile'}
           </Text>
 
           {isOwnProfile ? (
@@ -229,41 +258,27 @@ const ProfileScreen = () => {
             </View>
 
             <View className="flex-1 justify-center">
-              <Text className="mb-1 font-technical text-[10px] tracking-wider text-muted-foreground">
+              <Text className="mb-1 font-technical text-[10px] font-bold tracking-wider text-muted-foreground">
                 @{profileUser.username}
               </Text>
-              <Text
-                className="mb-2 font-body text-lg font-medium text-foreground"
-                numberOfLines={1}
-              >
+              <Text className="mb-2 font-body text-xl font-bold text-foreground" numberOfLines={1}>
                 {fullName}
               </Text>
 
-              {/* Rating & Location */}
-              <View className="flex-row items-center gap-3">
-                <View className="flex-row items-center gap-1">
-                  <Ionicons name="star" size={14} color="#EAB308" />
-                  <Text className="font-body text-[10px] text-muted-foreground">
-                    {averageRating > 0
-                      ? `${averageRating.toFixed(1)} (${totalReviews})`
-                      : 'NO_DATA'}
-                  </Text>
-                </View>
-
-                <View className="flex-1 flex-row items-center gap-1 pr-2">
-                  <Ionicons name="location" size={14} color="#64748B" />
-                  <Text className="font-body text-xs text-muted-foreground" numberOfLines={1}>
-                    {profileUser.location
-                      ? [
-                          profileUser.location.city,
-                          profileUser.location.province,
-                          profileUser.location.country,
-                        ]
-                          .filter(Boolean)
-                          .join(', ')
-                      : 'Location Unknown'}
-                  </Text>
-                </View>
+              {/* Location */}
+              <View className="flex-row items-center gap-1 pr-2">
+                <Ionicons name="location" size={14} color="#64748B" />
+                <Text className="font-body text-xs text-muted-foreground" numberOfLines={1}>
+                  {profileUser.location
+                    ? [
+                        profileUser.location.city,
+                        profileUser.location.province,
+                        profileUser.location.country,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')
+                    : 'Location Unknown'}
+                </Text>
               </View>
             </View>
           </View>
@@ -274,7 +289,7 @@ const ProfileScreen = () => {
               onPress={() => navigation.navigate('ProfileEdit')}
               className="justify-center rounded-sm bg-primary px-4 py-2 shadow-sm active:opacity-80"
             >
-              <Text className="font-technical text-xs font-bold uppercase tracking-wider text-primary-foreground">
+              <Text className="font-technical text-xs font-bold uppercase tracking-wider text-white">
                 Edit
               </Text>
             </TouchableOpacity>
@@ -282,19 +297,48 @@ const ProfileScreen = () => {
         </View>
 
         {/* Bio */}
-        <Text className="mt-5 font-body leading-relaxed text-muted-foreground">
-          {profileUser.bio || "This user hasn't initialized their bio yet."}
+        <Text className="mt-5 font-body leading-relaxed text-foreground">
+          {profileUser.bio || "This user hasn't written a bio yet."}
         </Text>
       </View>
 
       <ScrollView
-        className="flex-1 px-6"
+        className="flex-1 px-4"
         contentContainerStyle={{ paddingVertical: 24, paddingBottom: 100 }}
       >
+        {/* Reviews */}
+        <View className="mb-6 flex-row items-center justify-between rounded-sm border-2 border-border bg-card p-4 shadow-sm">
+          <View>
+            <Text className="font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Community Rating
+            </Text>
+            <View className="mt-1 flex-row items-center gap-2">
+              <Ionicons name="star" size={20} color="#F59E0B" />
+              <Text className="font-body text-lg font-bold text-foreground">
+                {averageRating > 0 ? averageRating.toFixed(1) : 'New'}
+              </Text>
+              <Text className="font-body text-xs text-muted-foreground">
+                ({totalReviews} reviews)
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            disabled={totalReviews === 0}
+            onPress={handleOpenReviews}
+            className={`rounded-sm px-4 py-2 ${totalReviews > 0 ? 'bg-primary active:opacity-80' : 'bg-muted'}`}
+          >
+            <Text
+              className={`font-body text-xs font-bold uppercase tracking-wider ${totalReviews > 0 ? 'text-white' : 'text-muted-foreground'}`}
+            >
+              Read Reviews
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Offering Section */}
         <View className="mb-6">
-          <Text className="mb-3 font-technical text-sm uppercase tracking-wider text-muted-foreground">
-            Offering
+          <Text className="mb-3 font-body text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            Offering to Teach
           </Text>
           <View className="flex-row flex-wrap gap-2">
             {offering.length > 0 ? (
@@ -303,83 +347,68 @@ const ProfileScreen = () => {
                   key={skill._id || skill.name}
                   onPress={() => setSelectedSkill(skill)}
                   activeOpacity={0.7}
-                  className={`rounded-sm border-2 px-4 py-2 ${getOfferingColor(skill.proficiency)}`}
+                  className={`flex-row items-center gap-1.5 rounded-sm border-2 px-4 py-2 shadow-sm ${getBadgeStyle(skill.proficiency)}`}
                 >
-                  <Text className="font-body text-white">{skill.name}</Text>
+                  <Text className="font-body text-sm font-medium text-white">{skill.name}</Text>
+                  <Ionicons
+                    name="information-circle"
+                    size={16}
+                    color="#FFFFFF"
+                    style={{ opacity: 0.8 }}
+                  />
                 </TouchableOpacity>
               ))
             ) : (
-              <Text className="font-body text-sm text-muted-foreground">
-                No skills established yet.
+              <Text className="font-body text-sm italic text-muted-foreground">
+                No skills listed yet.
               </Text>
             )}
           </View>
         </View>
 
         {/* Seeking Section */}
-        <View className="mb-6">
-          <Text className="mb-3 font-technical text-sm uppercase tracking-wider text-muted-foreground">
-            Seeking
+        <View className="mb-8">
+          <Text className="mb-3 font-body text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            Looking to Learn
           </Text>
           <View className="flex-row flex-wrap gap-2">
             {seeking.length > 0 ? (
-              seeking.map((skill) => {
-                const colorClasses = getSeekingColor(skill.proficiency);
-                return (
-                  <TouchableOpacity
-                    key={skill._id || skill.name}
-                    onPress={() => setSelectedSkill(skill)}
-                    activeOpacity={0.7}
-                    className={`rounded-sm border-2 bg-transparent px-4 py-2 ${colorClasses}`}
-                  >
-                    <Text className={`font-body ${colorClasses}`}>{skill.name}</Text>
-                  </TouchableOpacity>
-                );
-              })
+              seeking.map((skill) => (
+                <TouchableOpacity
+                  key={skill._id || skill.name}
+                  onPress={() => setSelectedSkill(skill)}
+                  activeOpacity={0.7}
+                  className={`flex-row items-center gap-1.5 rounded-sm border-2 px-4 py-2 shadow-sm ${getBadgeStyle(skill.proficiency)}`}
+                >
+                  <Text className="font-body text-sm font-medium text-white">{skill.name}</Text>
+                  <Ionicons
+                    name="information-circle"
+                    size={16}
+                    color="#FFFFFF"
+                    style={{ opacity: 0.8 }}
+                  />
+                </TouchableOpacity>
+              ))
             ) : (
-              <Text className="font-body text-sm text-muted-foreground">
-                No target skills established.
+              <Text className="font-body text-sm italic text-muted-foreground">
+                No target skills listed yet.
               </Text>
             )}
           </View>
         </View>
 
-        {/* Location Blueprint */}
-        <View className="mb-6">
-          <Text className="mb-3 font-technical text-sm uppercase tracking-wider text-muted-foreground">
-            Location_Blueprint
-          </Text>
-          <View className="relative h-32 items-center justify-center overflow-hidden rounded-sm border-2 border-solid border-muted-foreground bg-muted">
-            {/* SVG Grid Pattern */}
-            <View className="absolute inset-0 opacity-30" pointerEvents="none">
-              <Svg width="100%" height="100%">
-                <Defs>
-                  <Pattern id="locationGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-                    <Rect width="20" height="20" fill="none" />
-                    <Rect width="20" height="1" fill="#94A3B8" />
-                    <Rect width="1" height="20" fill="#94A3B8" />
-                  </Pattern>
-                </Defs>
-                <Rect width="100%" height="100%" fill="url(#locationGrid)" />
-              </Svg>
-            </View>
-
-            <Ionicons name="location" size={40} color="#4F46E5" style={{ opacity: 0.8 }} />
-          </View>
-        </View>
-
         {/* Trade History */}
         <View className="mb-6">
-          <Text className="mb-3 font-technical text-sm uppercase tracking-wider text-muted-foreground">
-            Swap_Archive ({tradeHistory.length})
+          <Text className="mb-3 font-body text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            Trade History ({tradeHistory.length})
           </Text>
 
           {isLoadingHistory ? (
             <ActivityIndicator size="small" color="#4F46E5" className="py-4" />
           ) : tradeHistory.length === 0 ? (
-            <View className="items-center rounded-sm border-2 border-dashed border-border p-6">
-              <Text className="text-center font-technical text-xs uppercase text-muted-foreground">
-                No structural logs found.
+            <View className="items-center rounded-sm border-2 border-dashed border-border bg-card p-6">
+              <Text className="text-center font-body text-xs italic text-muted-foreground">
+                No past trades found.
               </Text>
             </View>
           ) : (
@@ -400,7 +429,7 @@ const ProfileScreen = () => {
                     </View>
 
                     <View className="flex-1 justify-center">
-                      <Text className="font-body text-sm font-medium text-foreground">
+                      <Text className="font-body text-sm font-bold text-foreground">
                         {trade.partnerName}
                       </Text>
                       <Text className="mt-0.5 font-body text-xs text-muted-foreground">
@@ -409,11 +438,9 @@ const ProfileScreen = () => {
                     </View>
 
                     <View
-                      className={`rounded-sm px-2 py-1 ${trade.status === 'COMPLETED' ? 'bg-primary' : trade.status === 'CANCELLED' || trade.status === 'REJECTED' ? 'bg-red-500' : 'bg-accent'}`}
+                      className={`rounded-sm px-2 py-1 ${trade.status === 'COMPLETED' ? 'bg-emerald-500' : trade.status === 'CANCELLED' || trade.status === 'REJECTED' ? 'bg-destructive' : 'bg-primary'}`}
                     >
-                      <Text
-                        className={`font-technical text-[10px] font-bold uppercase ${trade.status === 'COMPLETED' ? 'text-primary-foreground' : trade.status === 'CANCELLED' || trade.status === 'REJECTED' ? 'text-white' : 'text-accent-foreground'}`}
-                      >
+                      <Text className="font-body text-[10px] font-bold uppercase tracking-wider text-white">
                         {trade.status}
                       </Text>
                     </View>
@@ -424,9 +451,9 @@ const ProfileScreen = () => {
               {hiddenTradesCount > 0 && !isHistoryExpanded && (
                 <TouchableOpacity
                   onPress={() => setIsHistoryExpanded(true)}
-                  className="mt-2 items-center justify-center rounded-sm border-2 border-solid border-border py-3 active:bg-muted"
+                  className="mt-2 items-center justify-center rounded-sm border-2 border-solid border-border bg-card py-3 active:bg-muted"
                 >
-                  <Text className="font-technical text-xs font-bold uppercase text-muted-foreground">
+                  <Text className="font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     + View {hiddenTradesCount} Older Swaps
                   </Text>
                 </TouchableOpacity>
@@ -435,9 +462,9 @@ const ProfileScreen = () => {
               {isHistoryExpanded && tradeHistory.length > 5 && (
                 <TouchableOpacity
                   onPress={() => setIsHistoryExpanded(false)}
-                  className="mt-2 items-center justify-center rounded-sm border-2 border-solid border-border py-3 active:bg-muted"
+                  className="mt-2 items-center justify-center rounded-sm border-2 border-solid border-border bg-card py-3 active:bg-muted"
                 >
-                  <Text className="font-technical text-xs font-bold uppercase text-muted-foreground">
+                  <Text className="font-body text-xs font-bold uppercase text-muted-foreground">
                     Collapse Archive
                   </Text>
                 </TouchableOpacity>
@@ -450,15 +477,15 @@ const ProfileScreen = () => {
       {/* Action Buttons (External Profile Only) */}
       {!isOwnProfile && (
         <View
-          className="border-t border-border bg-card px-6 pt-4"
-          style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+          className="border-t border-border bg-card px-6 pt-4 shadow-lg"
+          style={{ paddingBottom: Math.max(insets.bottom, 16) }}
         >
           <TouchableOpacity
             onPress={() => navigation.navigate('ProposeTrade', { userId: profileUser._id })}
-            className="w-full items-center justify-center rounded-sm bg-primary py-4 shadow-sm active:opacity-80"
+            className="w-full items-center justify-center rounded-sm bg-primary py-4 shadow-sm active:opacity-90"
           >
-            <Text className="font-technical text-sm font-bold uppercase tracking-wider text-primary-foreground">
-              Initiate Swap Protocol
+            <Text className="font-body text-sm font-bold uppercase tracking-wider text-white">
+              Request a Swap
             </Text>
           </TouchableOpacity>
         </View>
@@ -476,16 +503,16 @@ const ProfileScreen = () => {
             {/* Modal Header */}
             <View className="mb-4 flex-row items-center justify-between border-b border-border pb-4">
               <View>
-                <Text className="font-technical text-lg uppercase tracking-wider text-primary">
+                <Text className="font-body text-lg font-bold text-primary dark:text-[#A5B4FC]">
                   {selectedSkill?.name}
                 </Text>
-                <Text className="font-technical text-[10px] uppercase text-muted-foreground">
-                  {selectedSkill?.type === 'TEACH' ? 'Offering_Details' : 'Learning_Goals'}
+                <Text className="font-body text-xs text-muted-foreground">
+                  {selectedSkill?.type === 'TEACH' ? 'Offering Details' : 'Learning Goals'}
                 </Text>
               </View>
               <TouchableOpacity
                 onPress={() => setSelectedSkill(null)}
-                className="active:opacity-70"
+                className="p-2 active:opacity-70"
               >
                 <Ionicons name="close" size={24} color="#64748B" />
               </TouchableOpacity>
@@ -493,15 +520,13 @@ const ProfileScreen = () => {
 
             {/* Proficiency Badge */}
             <View className="mb-6">
-              <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-                Proficiency_Level
+              <Text className="mb-2 font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Proficiency Level
               </Text>
               <View
-                className={`self-start rounded-sm border-2 px-3 py-1 ${selectedSkill?.type === 'TEACH' ? getOfferingColor(selectedSkill.proficiency || 'Beginner') : getSeekingColor(selectedSkill?.proficiency || 'Beginner')}`}
+                className={`self-start rounded-sm border-2 px-3 py-1.5 ${getBadgeStyle(selectedSkill?.proficiency || 'Beginner')}`}
               >
-                <Text
-                  className={`font-body text-xs font-medium ${selectedSkill?.type === 'TEACH' ? 'text-white' : getSeekingColor(selectedSkill?.proficiency || 'Beginner').split(' ')[1]}`}
-                >
+                <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
                   {selectedSkill?.proficiency}
                 </Text>
               </View>
@@ -509,16 +534,111 @@ const ProfileScreen = () => {
 
             {/* Detailed Description */}
             <View>
-              <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">
-                {selectedSkill?.type === 'TEACH' ? 'Experience_Log' : 'Objective_Parameters'}
+              <Text className="mb-2 font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {selectedSkill?.type === 'TEACH' ? 'Experience Details' : 'Learning Goals'}
               </Text>
               <View className="rounded-sm border border-border bg-muted p-4">
                 <Text className="font-body text-sm leading-relaxed text-foreground">
-                  {selectedSkill?.description || 'No detailed parameters provided for this skill.'}
+                  {selectedSkill?.description || 'No detailed information provided.'}
                 </Text>
               </View>
             </View>
           </View>
+        </View>
+      </Modal>
+
+      {/* Reviews Modal */}
+      <Modal
+        visible={isReviewsModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setIsReviewsModalVisible(false)}
+      >
+        <View className="flex-1 bg-background pt-12">
+          <View className="mb-4 flex-row items-center justify-between border-b border-border px-6 pb-4">
+            <View>
+              <View>
+                <Text className="font-body text-xl font-bold text-foreground">
+                  Community Reviews ({totalReviews})
+                </Text>
+              </View>
+              <Text className="font-body text-sm text-muted-foreground">{fullName}</Text>
+            </View>
+            <TouchableOpacity onPress={() => setIsReviewsModalVisible(false)} className="p-2">
+              <Ionicons name="close" size={24} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+
+          {isLoadingReviews ? (
+            <View className="flex-1 items-center justify-center">
+              <ActivityIndicator size="large" color="#4F46E5" />
+            </View>
+          ) : (
+            <FlatList
+              data={reviewsList}
+              keyExtractor={(item) => item._id}
+              contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const offeringSkill = item.trade_id?.offered_skill_id?.name || 'Unknown Skill';
+                const receivingSkill =
+                  item.trade_id?.received_skill_id?.name ||
+                  item.trade_id?.sought_skill_id?.name ||
+                  'Unknown Skill';
+
+                return (
+                  <View className="mb-4 rounded-sm border-2 border-border bg-card p-4">
+                    <View className="mb-2 flex-row items-center justify-between">
+                      <View className="flex-1 flex-row items-center gap-3">
+                        <View className="h-8 w-8 overflow-hidden rounded-sm bg-muted">
+                          <Image
+                            source={{
+                              uri: item.reviewer_id?.avatar_url || 'https://placehold.co/150',
+                            }}
+                            className="h-full w-full"
+                          />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="font-body text-sm font-bold text-foreground">
+                            {item.reviewer_id?.firstname} {item.reviewer_id?.lastname}
+                          </Text>
+                          <Text
+                            className="mt-0.5 font-technical text-[10px] uppercase tracking-wider text-muted-foreground"
+                            numberOfLines={1}
+                          >
+                            {offeringSkill} ↔ {receivingSkill}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text className="font-body text-[10px] text-muted-foreground">
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+
+                    <View className="mb-2 flex-row items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Ionicons
+                          key={star}
+                          name={star <= item.score ? 'star' : 'star-outline'}
+                          size={14}
+                          color="#F59E0B"
+                        />
+                      ))}
+                    </View>
+
+                    <Text className="font-body text-sm text-foreground">
+                      {item.comment || 'No written comment provided.'}
+                    </Text>
+                  </View>
+                );
+              }}
+              ListEmptyComponent={() => (
+                <Text className="text-center font-technical text-muted-foreground">
+                  No reviews have been written yet.
+                </Text>
+              )}
+            />
+          )}
         </View>
       </Modal>
     </View>

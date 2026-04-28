@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
   Image,
+  LayoutAnimation,
   Modal,
   Platform,
   RefreshControl,
@@ -11,6 +12,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  UIManager,
+  useColorScheme,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,10 +22,18 @@ import { getAIMatches, IAIMatchUser } from '../api/ai';
 import { checkAuth, IUser } from '../api/auth';
 import { getAllUsers } from '../api/user';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 const SearchScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
+
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
@@ -42,6 +53,7 @@ const SearchScreen = () => {
   const [aiError, setAiError] = useState<string | null>(null);
 
   const [displayLimit, setDisplayLimit] = useState(5);
+  const [expandedReasons, setExpandedReasons] = useState<string[]>([]);
 
   useEffect(() => {
     if (route.params?.prefilledSkill) {
@@ -87,7 +99,7 @@ const SearchScreen = () => {
       if (err.message?.includes('skills')) {
         setAiError(err.message);
       } else {
-        setAiError('AI Matrix Offline');
+        setAiError('AI Services Temporarily Offline');
       }
     } finally {
       setIsLoadingSkills(false);
@@ -117,6 +129,13 @@ const SearchScreen = () => {
     );
   };
 
+  const toggleReasonExpand = (userId: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedReasons((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+  };
+
   const formatLocation = (location: any) => {
     if (!location) return 'Remote';
     if (typeof location === 'string') return location;
@@ -126,16 +145,16 @@ const SearchScreen = () => {
     return 'Remote';
   };
 
-  const getProficiencyColors = (proficiency?: string) => {
+  const getBadgeStyle = (proficiency?: string) => {
     switch (proficiency?.toUpperCase()) {
       case 'EXPERT':
-        return { border: 'border-purple-500', text: 'text-purple-500' };
+        return 'bg-purple-600 border-purple-700';
       case 'ADVANCED':
-        return { border: 'border-green-500', text: 'text-green-500' };
+        return 'bg-emerald-600 border-emerald-700';
       case 'INTERMEDIATE':
-        return { border: 'border-yellow-500', text: 'text-yellow-500' };
+        return 'bg-amber-600 border-amber-700';
       default:
-        return { border: 'border-blue-500', text: 'text-blue-500' };
+        return 'bg-blue-600 border-blue-700';
     }
   };
 
@@ -173,29 +192,18 @@ const SearchScreen = () => {
   const filteredAI = filterList(aiMatches);
   const filteredStandard = filterList(dbUsers);
 
+  const dedupedStandard = filteredStandard.filter(
+    (stdUser) =>
+      !filteredAI.some(
+        (aiUser) => (aiUser._id || aiUser.userId) === (stdUser._id || stdUser.userId),
+      ),
+  );
+
+  const activeList = [...filteredAI, ...dedupedStandard];
+
   const isSearching = searchQuery.trim().length > 0 || selectedSkills.length > 0;
-
-  let activeList: any[] = [];
-  let listTitle = '';
-  let listIcon: any = 'people';
-
-  if (isSearching) {
-    const dedupedStandard = filteredStandard.filter(
-      (stdUser) => !filteredAI.some((aiUser) => (aiUser._id || aiUser.userId) === stdUser._id),
-    );
-
-    activeList = [...filteredAI, ...dedupedStandard];
-    listTitle = 'Search_Results';
-    listIcon = 'search';
-  } else if (!aiError && filteredAI.length > 0) {
-    activeList = filteredAI;
-    listTitle = 'Neural_Match_Protocol';
-    listIcon = 'sparkles';
-  } else {
-    activeList = filteredStandard;
-    listTitle = 'Standard_Directory';
-    listIcon = 'people';
-  }
+  const listTitle = isSearching ? 'Search Results' : 'Community Directory';
+  const listIcon = isSearching ? 'search' : 'people';
 
   const displayedItems = activeList.slice(0, displayLimit);
   const hasMoreItems = displayLimit < activeList.length;
@@ -207,24 +215,24 @@ const SearchScreen = () => {
         className="z-10 border-b border-border bg-card p-6 shadow-sm"
         style={{ paddingTop: Math.max(insets.top, 24) }}
       >
-        <View className="mb-6  flex-row items-center justify-between">
-          <Text className="font-technical text-2xl uppercase tracking-wider text-foreground">
-            Discovery_Matrix
+        <View className="mb-4 flex-row items-center justify-between">
+          <Text className="font-technical text-2xl uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            Discover
           </Text>
 
           {Platform.OS === 'web' && (
             <TouchableOpacity
               onPress={onRefresh}
               disabled={refreshing}
-              className={`flex-row items-center gap-2 rounded-sm border-2 border-solid px-3 py-1.5 transition-colors ${refreshing ? 'border-muted-foreground bg-muted opacity-50' : 'border-primary bg-card active:bg-muted'}`}
+              className={`flex-row items-center gap-2 rounded-sm border-2 border-solid px-3 py-1.5 transition-colors ${refreshing ? 'border-muted bg-muted opacity-50' : 'border-border bg-card hover:bg-slate-50 active:bg-muted dark:hover:bg-slate-800'}`}
             >
               <Ionicons
                 name={refreshing ? 'sync' : 'refresh'}
                 size={14}
-                color={refreshing ? '#64748B' : '#4F46E5'}
+                color={refreshing ? '#64748B' : primaryIconColor}
               />
               <Text
-                className={`font-technical text-xs font-bold uppercase ${refreshing ? 'text-muted-foreground' : 'text-primary'}`}
+                className={`font-body text-xs font-bold uppercase ${refreshing ? 'text-muted-foreground' : 'text-primary dark:text-[#A5B4FC]'}`}
               >
                 {refreshing ? 'Scanning...' : 'Refresh'}
               </Text>
@@ -232,7 +240,7 @@ const SearchScreen = () => {
           )}
         </View>
 
-        <View className="flex-row gap-3">
+        <View className="flex-row items-center gap-3">
           <View className="relative flex-1 justify-center">
             <View className="absolute left-3 z-10">
               <Ionicons name="search" size={20} color="#64748B" />
@@ -242,7 +250,7 @@ const SearchScreen = () => {
               onChangeText={setSearchQuery}
               placeholder="Search skills or users..."
               placeholderTextColor="#64748B"
-              className="w-full rounded-sm border-2 border-solid border-border bg-muted py-3 pl-10 pr-10 font-body text-foreground focus:border-primary"
+              className="w-full rounded-sm border-2 border-solid border-border bg-muted py-3 pl-10 pr-10 font-body text-foreground focus:border-primary focus:outline-none"
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity
@@ -257,17 +265,17 @@ const SearchScreen = () => {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => setIsFilterModalVisible(true)}
-            className={`relative items-center justify-center rounded-sm border-2 border-solid px-4 transition-colors ${selectedSkills.length > 0 ? 'border-primary bg-muted' : 'border-border bg-card'}`}
+            className={`relative items-center justify-center rounded-sm border-2 border-solid px-4 py-2 transition-colors ${selectedSkills.length > 0 ? 'border-primary bg-muted' : 'border-border bg-card'}`}
           >
             <Ionicons
               name="options-outline"
               size={24}
-              color={selectedSkills.length > 0 ? '#4F46E5' : '#64748B'}
+              color={selectedSkills.length > 0 ? primaryIconColor : '#64748B'}
             />
 
             {selectedSkills.length > 0 && (
-              <View className="absolute -right-2 -top-2 h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-accent">
-                <Text className="font-technical text-[10px] font-bold text-accent-foreground">
+              <View className="absolute -right-2 -top-2 h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-primary">
+                <Text className="font-body text-[10px] font-bold text-white">
                   {selectedSkills.length}
                 </Text>
               </View>
@@ -285,22 +293,22 @@ const SearchScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#4F46E5"
-              colors={['#4F46E5']}
+              tintColor={primaryIconColor}
+              colors={[primaryIconColor as string]}
             />
           ) : undefined
         }
       >
-        <View className="p-6">
+        <View className="p-4">
           {/* Dynamic Header */}
           <View className="mb-4 flex-row items-center gap-2">
             <View className="flex-row items-center gap-2">
-              <Ionicons name={listIcon} size={18} color="#4F46E5" />
-              <Text className="font-technical text-sm uppercase tracking-wider text-primary">
+              <Ionicons name={listIcon} size={18} color={primaryIconColor} />
+              <Text className="font-body text-sm font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
                 {listTitle}
               </Text>
             </View>
-            <Text className="font-technical text-[10px] uppercase text-muted-foreground">
+            <Text className="font-body text-[10px] font-bold uppercase text-muted-foreground">
               {activeList.length} Found
             </Text>
           </View>
@@ -308,87 +316,96 @@ const SearchScreen = () => {
           {/* Loading States */}
           {isAnalyzing || isLoadingUsers ? (
             <View className="mb-8 items-center justify-center rounded-sm border-2 border-dashed border-primary py-8">
-              <ActivityIndicator size="small" color="#4F46E5" />
-              <Text className="mt-4 font-technical text-sm uppercase tracking-wider text-primary">
-                Scanning_Network...
+              <ActivityIndicator size="large" color={primaryIconColor} />
+              <Text className="mt-4 font-body text-sm font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+                Scanning Network...
               </Text>
             </View>
           ) : aiError && !isSearching && activeList.length === 0 ? (
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Profile')}
-              className="items-center justify-center rounded-sm border-2 border-dashed border-border bg-muted p-6"
-            >
-              <Text className="text-center font-technical text-xs uppercase text-muted-foreground">
-                Matrix_Offline: {aiError}
+            <View>
+              <Ionicons name="warning" size={32} color="#64748B" className="mb-2" />
+              <Text className="text-center font-body text-sm font-bold text-muted-foreground">
+                AI Services Offline: {aiError}
               </Text>
-              <Text className="mt-2 text-center font-body text-[10px] uppercase text-primary underline">
-                Update Profile Skills
-              </Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Profile')}
+                activeOpacity={0.8}
+                className="mt-4 rounded-sm bg-primary px-6 py-3"
+              >
+                <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
+                  Update Your Profile Skills
+                </Text>
+              </TouchableOpacity>
+            </View>
           ) : activeList.length === 0 ? (
-            <View className="items-center justify-center rounded-sm border-2 border-dashed border-border bg-muted py-10">
+            <View className="items-center justify-center rounded-sm border-2 border-dashed border-border bg-card py-12 shadow-sm">
               <Ionicons name="search-outline" size={48} color="#64748B" />
-              <Text className="mt-4 font-technical text-sm uppercase tracking-wider text-muted-foreground">
-                No_Matches_Found
+              <Text className="mt-4 font-body text-sm font-bold text-muted-foreground">
+                No Matches Found
               </Text>
             </View>
           ) : (
             <View className="flex-col gap-4">
               {displayedItems.map((user: any) => {
+                const userId = user._id || user.userId;
                 const hasAIBadge = !!user.aiMatchScore && user.aiMatchScore > 0;
+                const isReasonExpanded = expandedReasons.includes(userId);
 
                 return (
                   <TouchableOpacity
-                    key={user._id || user.userId}
-                    onPress={() =>
-                      navigation.navigate('UserProfile', { userId: user._id || user.userId })
-                    }
-                    className={`rounded-sm border-2 border-solid p-4 shadow-sm active:border-primary ${hasAIBadge ? 'border-primary bg-card' : 'border-border bg-card'}`}
+                    key={userId}
+                    onPress={() => navigation.navigate('UserProfile', { userId: userId })}
+                    activeOpacity={0.9}
+                    className={`overflow-hidden rounded-sm border-2 border-solid shadow-sm ${hasAIBadge ? 'border-primary bg-card' : 'border-border bg-card'}`}
                   >
-                    {/* Identity & Match Score */}
-                    <View className="mb-3 flex-row items-center gap-3">
-                      <Image
-                        source={{ uri: user.avatar_url || 'https://placehold.co/150' }}
-                        className="h-12 w-12 rounded-sm border-2 border-solid border-muted-foreground bg-muted"
-                        resizeMode="contain"
-                      />
-                      <View className="flex-1">
-                        <Text className="font-body text-base font-bold text-foreground">
-                          {user.firstname} {user.lastname}
-                        </Text>
-                        <View className="flex-row items-center gap-1">
-                          <Ionicons name="location" size={12} color="#64748B" />
-                          <Text className="font-body text-xs text-muted-foreground">
-                            {formatLocation(user.location)}
+                    <View className="p-4">
+                      {/* Identity & Match Score */}
+                      <View className="mb-3 flex-row items-center gap-3">
+                        <Image
+                          source={{ uri: user.avatar_url || 'https://placehold.co/150' }}
+                          className="h-12 w-12 rounded-sm border-2 border-solid border-muted-foreground bg-muted"
+                          resizeMode="contain"
+                        />
+                        <View className="flex-1">
+                          <Text className="font-body text-base font-bold text-foreground">
+                            {user.firstname} {user.lastname}
                           </Text>
+                          <View className="mt-0.5 flex-row items-center gap-1">
+                            <Ionicons name="location" size={12} color="#64748B" />
+                            <Text className="font-body text-xs text-muted-foreground">
+                              {formatLocation(user.location)}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                      {/* Only show AI Match Badge if AI is active */}
-                      {hasAIBadge && (
-                        <View className="items-center justify-center rounded-sm bg-primary px-2 py-1">
-                          <Text className="font-technical text-[10px] font-bold uppercase tracking-wider text-white">
-                            {user.aiMatchScore}% Match
-                          </Text>
-                        </View>
-                      )}
-                    </View>
 
-                    {/* All Offering Skills */}
-                    <View className={hasAIBadge ? 'mb-3' : ''}>
-                      <View className="flex-row flex-wrap" style={{ gap: 6 }}>
+                        {/* Only show AI Match Badge if AI is active */}
+                        {hasAIBadge && (
+                          <View className="items-center justify-center rounded-sm bg-primary px-2 py-1 shadow-sm">
+                            <Text className="font-technical text-[10px] font-bold uppercase tracking-wider text-white">
+                              {user.aiMatchScore}% Match
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* All Offering Skills */}
+                      <View className="flex-row flex-wrap gap-2">
                         {user.offering?.map((skill: any, index: number) => {
-                          const proficiency = skill.proficiency || 'BEGINNER';
-                          const colors = getProficiencyColors(proficiency);
+                          const skillName =
+                            typeof skill === 'string' ? skill : skill.skill || skill.name;
+                          const proficiency =
+                            typeof skill === 'string'
+                              ? 'BEGINNER'
+                              : skill.proficiency || 'BEGINNER';
+                          const badgeClass = getBadgeStyle(proficiency);
 
                           return (
                             <View
                               key={`offer-${index}`}
-                              className={`rounded-sm border-2 border-solid px-2 py-1 ${colors.border}`}
+                              className={`rounded-sm border-2 border-solid px-2 py-1 shadow-sm ${badgeClass}`}
                             >
-                              <Text
-                                className={`font-body text-[10px] uppercase tracking-wider ${colors.text}`}
-                              >
-                                {skill.skill || skill}
+                              <Text className="font-body text-xs font-bold text-white">
+                                {skillName}
                               </Text>
                             </View>
                           );
@@ -403,20 +420,32 @@ const SearchScreen = () => {
 
                     {/* Only show Reason block if AI is active */}
                     {hasAIBadge && user.aiReason && (
-                      <View className="flex-row items-start gap-2 rounded-sm border-2 border-solid border-border bg-muted p-3">
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={(e) => {
+                          if (e && e.stopPropagation) e.stopPropagation();
+                          toggleReasonExpand(userId);
+                        }}
+                        className="flex-row items-start gap-2 border-t-2 border-solid border-border bg-slate-50 p-3 dark:bg-slate-800/50"
+                      >
                         <Ionicons
                           name="sparkles"
                           size={14}
-                          color="#4F46E5"
+                          color={primaryIconColor}
                           style={{ marginTop: 2 }}
                         />
-                        <Text
-                          className="flex-1 font-body text-[11px] italic leading-tight text-muted-foreground"
-                          numberOfLines={2}
-                        >
-                          {user.aiReason}
-                        </Text>
-                      </View>
+                        <View className="flex-1">
+                          <Text
+                            className="font-body text-[11px] italic leading-relaxed text-foreground"
+                            numberOfLines={isReasonExpanded ? undefined : 2}
+                          >
+                            {user.aiReason}
+                          </Text>
+                          <Text className="mt-1 font-body text-[10px] font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+                            {isReasonExpanded ? 'Show Less' : 'Read Full Analysis'}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
                     )}
                   </TouchableOpacity>
                 );
@@ -427,10 +456,10 @@ const SearchScreen = () => {
           {hasMoreItems && (
             <TouchableOpacity
               onPress={() => setDisplayLimit((prev) => prev + 10)}
-              className="mt-4 items-center justify-center rounded-sm border-2 border-solid border-border bg-muted py-4 active:bg-card"
+              className="mt-6 items-center justify-center rounded-sm border-2 border-solid border-border bg-slate-200 py-4 active:bg-slate-300 dark:bg-slate-800 dark:active:bg-slate-700"
             >
-              <Text className="font-technical text-xs font-bold uppercase text-foreground">
-                Load 10 More Results
+              <Text className="font-body text-xs font-bold uppercase tracking-wider text-foreground">
+                Load More Results
               </Text>
             </TouchableOpacity>
           )}
@@ -447,42 +476,56 @@ const SearchScreen = () => {
         {/* Backdrop */}
         <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
           {/* Modal container */}
-          <View className="h-[85%] overflow-hidden rounded-t-3xl bg-background shadow-lg">
+          <View className="h-[85%] overflow-hidden rounded-t-2xl bg-background shadow-lg">
             {/* Modal Header */}
-            <View className="flex-row items-center justify-between border-b border-border bg-card p-6">
-              <Text className="font-technical text-xl uppercase tracking-wider text-foreground">
-                Filter_Discipline
-              </Text>
-              <View className="flex-row items-center gap-4">
-                {selectedSkills.length > 0 && (
-                  <TouchableOpacity onPress={() => setSelectedSkills([])}>
-                    <Text className="font-technical text-xs font-bold uppercase text-primary">
-                      Clear All
-                    </Text>
-                  </TouchableOpacity>
-                )}
+            <View className="z-10 flex-row items-center justify-between border-b border-border bg-card p-6 shadow-sm">
+              <View className="flex-row items-center gap-2">
+                <TouchableOpacity onPress={() => setIsFilterModalVisible(false)} className="p-2">
+                  <Ionicons name="close" size={24} color="#64748B" />
+                </TouchableOpacity>
+                <Text className="font-technical text-xl uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+                  Filter Skills
+                </Text>
               </View>
+
+              {selectedSkills.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSelectedSkills([])}
+                  className="rounded-sm border-2 border-red-200 bg-red-50 p-2 dark:border-red-900/50  dark:bg-red-900/20"
+                >
+                  <Text className="text-destructive font-body text-xs font-bold uppercase">
+                    Clear All
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Modal Body */}
-            <ScrollView className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 40 }}>
+            <ScrollView
+              className="flex-1 p-6"
+              contentContainerStyle={{ paddingBottom: 40 }}
+              showsVerticalScrollIndicator={false}
+            >
               {isLoadingSkills ? (
                 <View className="items-center justify-center py-12">
-                  <ActivityIndicator size="large" color="#4F46E5" />
-                  <Text className="mt-4 font-technical text-xs uppercase text-muted-foreground">
+                  <ActivityIndicator size="large" color={primaryIconColor} />
+                  <Text className="mt-4 font-technical text-sm font-medium uppercase text-muted-foreground">
                     Loading Categories...
                   </Text>
                 </View>
               ) : (
-                <View className="flex-col gap-8">
+                <View className="flex-col gap-6">
                   {Object.entries(skillsByCategory).map(([category, skills]) => {
                     const isExpanded = expandedCategories.includes(category);
                     const displaySkills = isExpanded ? skills : skills.slice(0, 5);
                     const hiddenCount = skills.length - 5;
 
                     return (
-                      <View key={category}>
-                        <Text className="mb-3 border-l-2 border-primary pl-2 font-technical text-xs uppercase tracking-widest text-muted-foreground">
+                      <View
+                        key={category}
+                        className="rounded-lg border-2 border-border bg-card p-4 shadow-sm"
+                      >
+                        <Text className="mb-3 font-body text-xs font-bold uppercase tracking-widest text-primary dark:text-[#A5B4FC]">
                           {category}
                         </Text>
 
@@ -494,7 +537,7 @@ const SearchScreen = () => {
                               <TouchableOpacity
                                 key={skill._id}
                                 onPress={() => toggleSkill(skill.name)}
-                                className={`flex-row items-center gap-1.5 rounded-sm border-2 border-solid px-4 py-2 transition-colors active:opacity-80 ${isSeleted ? 'border-primary bg-primary' : 'border-border bg-card'}`}
+                                className={`transition-colorsactive:opacity-80 flex-row items-center gap-1.5 rounded-sm border-2 border-solid px-3 py-1.5 ${isSeleted ? 'border-primary bg-primary' : 'border-border bg-background'}`}
                               >
                                 {skill.icon_name && (
                                   <Ionicons
@@ -504,7 +547,7 @@ const SearchScreen = () => {
                                   />
                                 )}
                                 <Text
-                                  className={`font-body text-sm ${isSeleted ? 'text-white' : 'text-foreground'}`}
+                                  className={`font-body text-xs font-medium ${isSeleted ? 'text-white' : 'text-foreground'}`}
                                 >
                                   {skill.name}
                                 </Text>
@@ -515,9 +558,9 @@ const SearchScreen = () => {
                           {hiddenCount > 0 && (
                             <TouchableOpacity
                               onPress={() => toggleCategoryExpand(category)}
-                              className="flex-row items-center justify-center rounded-sm border-2 border-solid border-border bg-card px-4 py-2 active:bg-muted"
+                              className="flex-row items-center justify-center rounded-sm border-2 border-dashed border-border bg-background px-4 py-1.5 active:bg-muted"
                             >
-                              <Text className="font-technical text-sm font-bold uppercase text-muted-foreground">
+                              <Text className="font-body text-xs font-bold text-muted-foreground">
                                 {isExpanded ? 'Show Less' : `+ ${hiddenCount} More`}
                               </Text>
                             </TouchableOpacity>
@@ -532,14 +575,14 @@ const SearchScreen = () => {
 
             {/* Modal Footer */}
             <View
-              className="border-t border-border bg-card p-6"
-              style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+              className="border-t border-border bg-card p-6 shadow-lg"
+              style={{ paddingBottom: Math.max(insets.bottom, 16) }}
             >
               <TouchableOpacity
                 onPress={() => setIsFilterModalVisible(false)}
-                className="w-full items-center justify-center rounded-sm bg-primary py-4 active:opacity-90"
+                className="w-full items-center justify-center rounded-sm bg-primary py-4 shadow-sm active:opacity-90"
               >
-                <Text className="font-technical text-sm font-bold uppercase text-white">
+                <Text className="font-body text-sm font-bold uppercase tracking-wider text-white">
                   Show Matches
                 </Text>
               </TouchableOpacity>

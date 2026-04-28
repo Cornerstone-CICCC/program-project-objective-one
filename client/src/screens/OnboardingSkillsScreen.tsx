@@ -44,14 +44,12 @@ const OnboardingSkillsScreen = () => {
     visible: boolean;
     title: string;
     message: string;
-    isSuccess: boolean;
     variant: 'default' | 'error' | 'success';
     freshUser?: any;
   }>({
     visible: false,
     title: '',
     message: '',
-    isSuccess: false,
     variant: 'default',
     freshUser: null,
   });
@@ -122,8 +120,6 @@ const OnboardingSkillsScreen = () => {
 
     const finalPayload = [...offeringPayload, ...seekingPayload];
 
-    console.log('Deploying new user skills to Database...', finalPayload);
-
     try {
       const success = await addBulkUserSkills(finalPayload);
 
@@ -132,18 +128,16 @@ const OnboardingSkillsScreen = () => {
 
         setAlertConfig({
           visible: true,
-          title: 'Initialization_Complete',
-          message: 'Your skill parameters have been established. Welcome to Swappa.',
-          isSuccess: true,
+          title: 'Setup Complete',
+          message: 'Your skills have been saved. Welcome to Swappa!',
           variant: 'success',
           freshUser: freshUser,
         });
       } else {
         setAlertConfig({
           visible: true,
-          title: 'Connection_Error',
+          title: 'Connection Error',
           message: 'Failed to save your skills. Please try again.',
-          isSuccess: false,
           variant: 'error',
         });
       }
@@ -151,9 +145,8 @@ const OnboardingSkillsScreen = () => {
       console.error('Onboarding submission error:', err);
       setAlertConfig({
         visible: true,
-        title: 'System_Error',
+        title: 'System Error',
         message: 'An unexpected error occurred.',
-        isSuccess: false,
         variant: 'error',
       });
     } finally {
@@ -164,9 +157,9 @@ const OnboardingSkillsScreen = () => {
   if (isLoadingSkills) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#1E40AF" />
-        <Text className="mt-4 font-mono text-sm uppercase tracking-wider text-muted-foreground">
-          Loading Skill Database...
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text className="mt-4 font-body text-sm font-medium text-muted-foreground">
+          Loading Skills...
         </Text>
       </View>
     );
@@ -184,23 +177,23 @@ const OnboardingSkillsScreen = () => {
       >
         <View className="mb-2 flex-row items-center justify-between">
           <Text className="font-technical text-2xl uppercase tracking-wider text-primary">
-            {currentStep === 1 ? 'Phase_1' : 'Phase_2'}
+            Step {currentStep}
           </Text>
-          <Text className="font-technical text-xs uppercase text-muted-foreground">
-            Step {currentStep} of 2
+          <Text className="font-technical text-xs font-bold text-muted-foreground">
+            {currentStep} of 2
           </Text>
         </View>
-        <Text>
+        <Text className="font-body text-sm text-foreground">
           {currentStep === 1
-            ? 'Declare the assets and skills you bring to the network.'
-            : 'Identify the knowledge you wish to acquire from others.'}
+            ? 'What skills can you offer to the community?'
+            : 'What skills are you looking to learn?'}
         </Text>
 
         {/* Progress Bar */}
-        <View className="mt-4 h-1 w-full flex-row overflow-hidden rounded-full bg-muted">
+        <View className="mt-4 h-1.5 w-full flex-row overflow-hidden rounded-full bg-muted">
           <View className="h-full flex-1 bg-primary" />
           <View
-            className={`h-full flex-1 transition-colors ${currentStep === 2 ? 'bg-accent' : 'bg-transparent'}`}
+            className={`h-full flex-1 transition-colors ${currentStep === 2 ? 'bg-primary' : 'bg-transparent'}`}
           />
         </View>
       </View>
@@ -218,17 +211,17 @@ const OnboardingSkillsScreen = () => {
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search the skill database..."
+            placeholder="Search skills..."
             placeholderTextColor="#64748B"
-            className="w-full rounded-sm border-2 border-solid border-border bg-card py-3 pl-12 pr-4 font-body text-foreground focus:border-primary"
+            className="w-full rounded-sm border-2 border-solid border-border bg-muted py-3 pl-12 pr-4 font-body text-foreground focus:border-primary focus:outline-none"
           />
         </View>
 
         <View className="mb-4 flex-row items-center justify-between">
-          <Text className="font-technical text-xs uppercase tracking-wider text-muted-foreground">
-            {searchQuery ? 'Search_Results' : 'Browse_Categories'}
+          <Text className="font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            {searchQuery ? 'Search Results' : 'Browse Categories'}
           </Text>
-          <Text className="font-technical text-[10px] uppercase text-primary">
+          <Text className="font-body text-xs font-bold text-primary">
             {activeSelectionIds.length} Selected
           </Text>
         </View>
@@ -239,24 +232,24 @@ const OnboardingSkillsScreen = () => {
             searchResults.length > 0 ? (
               searchResults.map((skill) => {
                 const isSelected = activeSelectionIds.includes(skill._id);
+                const textStyle = isSelected ? 'text-white' : 'text-foreground';
+
                 return (
                   <TouchableOpacity
                     key={skill._id}
                     onPress={() => toggleSkill(skill._id)}
-                    className={`flex-row items-center justify-between rounded-sm border-2 border-solid p-4 active:opacity-80 ${isSelected ? (currentStep === 1 ? 'border-primary bg-primary' : 'border-accent bg-accent') : 'border-border bg-card'}`}
+                    className={`flex-row items-center justify-between rounded-sm border-2 border-solid p-4 active:opacity-80 ${isSelected ? 'border-primary bg-primary' : 'border-border bg-muted'}`}
                   >
-                    <Text
-                      className={`font-body text-sm ${isSelected ? 'text-white' : 'text-foreground'}`}
-                    >
-                      {skill.name}
-                    </Text>
-                    {isSelected && <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
+                    <Text className={`font-body text-sm font-bold ${textStyle}`}>{skill.name}</Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
+                    )}
                   </TouchableOpacity>
                 );
               })
             ) : (
               <Text className="py-4 text-center font-body text-sm text-muted-foreground">
-                No matching skills found in the database.
+                No matching skills found.
               </Text>
             )
           ) : (
@@ -267,7 +260,7 @@ const OnboardingSkillsScreen = () => {
               return (
                 <View
                   key={category}
-                  className="overflow-hidden rounded-sm border-2 border-solid border-border bg-card"
+                  className="overflow-hidden rounded-sm border-2 border-solid border-border bg-background"
                 >
                   <TouchableOpacity
                     onPress={() => {
@@ -277,13 +270,11 @@ const OnboardingSkillsScreen = () => {
                     className="flex-row items-center justify-between bg-muted p-4 active:bg-border"
                   >
                     <View className="flex-row items-center gap-2">
-                      <Text className="font-technical text-sm uppercase tracking-wider text-foreground">
+                      <Text className="font-technical text-sm font-bold uppercase tracking-wider text-foreground">
                         {category}
                       </Text>
                       {selectedCount > 0 && (
-                        <View
-                          className={`h-5 w-5 items-center justify-center rounded-full ${currentStep === 1 ? 'bg-primary' : 'bg-accent'}`}
-                        >
+                        <View className="h-5 w-5 items-center justify-center rounded-full bg-primary">
                           <Text className="font-technical text-[10px] font-bold text-white">
                             {selectedCount}
                           </Text>
@@ -301,15 +292,15 @@ const OnboardingSkillsScreen = () => {
                     <View className="flex-row flex-wrap gap-2 p-4">
                       {skills.map((skill) => {
                         const isSelected = activeSelectionIds.includes(skill._id);
+                        const textStyle = isSelected ? 'text-white' : 'text-foreground';
+
                         return (
                           <TouchableOpacity
                             key={skill._id}
                             onPress={() => toggleSkill(skill._id)}
-                            className={`rounded-sm border-2 border-solid px-3 py-2 active:opacity-80 ${isSelected ? (currentStep === 1 ? 'border-primary bg-primary' : 'border-accent bg-accent') : 'border-border bg-background'}`}
+                            className={`rounded-sm border-2 border-solid px-3 py-2 active:opacity-80 ${isSelected ? 'border-primary bg-primary' : 'border-border bg-muted'}`}
                           >
-                            <Text
-                              className={`font-body text-xs ${isSelected ? 'text-white' : 'text-foreground'}`}
-                            >
+                            <Text className={`font-body text-xs font-medium ${textStyle}`}>
                               {skill.name}
                             </Text>
                           </TouchableOpacity>
@@ -333,7 +324,7 @@ const OnboardingSkillsScreen = () => {
           <TouchableOpacity
             onPress={handlePrevStep}
             disabled={isSubmitting}
-            className="items-center justify-center rounded-sm border-2 border-border bg-card px-4 py-4 active:bg-muted"
+            className="items-center justify-center rounded-sm border-2 border-border bg-background px-4 py-4 active:bg-muted-foreground"
           >
             <Ionicons name="arrow-back" size={20} color="#64748B" />
           </TouchableOpacity>
@@ -342,20 +333,17 @@ const OnboardingSkillsScreen = () => {
         <TouchableOpacity
           onPress={currentStep === 1 ? handleNextStep : handleCompleteRegistration}
           disabled={!isStepValid || isSubmitting}
-          className={`flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid py-4 ${isStepValid && !isSubmitting ? (currentStep === 1 ? 'border-primary bg-primary' : 'border-accent bg-accent') : 'border-muted-foreground bg-muted opacity-50'}`}
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-sm py-4 transition-colors duration-300 ${isStepValid && !isSubmitting ? 'bg-primary active:opacity-90' : 'bg-slate-400 opacity-70'}`}
         >
           {isSubmitting && <ActivityIndicator size="small" color="#FFFFFF" />}
-          <Text
-            className="font-technical text-sm uppercase tracking-wider"
-            style={{ color: isStepValid ? '#FFFFFF' : '#64748B' }}
-          >
+          <Text className="font-technical font-bold uppercase tracking-wider text-white">
             {isSubmitting
-              ? 'Processing...'
+              ? 'Saving...'
               : !isStepValid
-                ? 'Awaiting_Input'
+                ? 'Select a Skill'
                 : currentStep === 1
-                  ? 'Next_Phase'
-                  : 'Establish_Connection'}
+                  ? 'Next Step'
+                  : 'Complete Setup'}
           </Text>
           {isStepValid && !isSubmitting && currentStep === 1 && (
             <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
@@ -374,7 +362,7 @@ const OnboardingSkillsScreen = () => {
         onClose={() => {
           setAlertConfig((prev) => ({ ...prev, visible: false }));
 
-          if (alertConfig.isSuccess) {
+          if (alertConfig.variant === 'success') {
             if (alertConfig.freshUser) {
               const userData = alertConfig.freshUser.user || alertConfig.freshUser;
               setAuth(userData, token || undefined);

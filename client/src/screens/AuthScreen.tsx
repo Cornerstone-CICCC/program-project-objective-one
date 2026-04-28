@@ -32,24 +32,29 @@ const AuthScreen = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [showProvinceModal, setShowProvinceModal] = useState(false);
   const [showCityModal, setShowCityModal] = useState(false);
 
-  const [pendingAuthUser, setPendingAuthUser] = useState<any>(null);
+  const [fieldErrors, setFieldErrors] = useState({
+    email: false,
+    username: false,
+    password: false,
+    location: false,
+  });
 
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
     message: string;
-    isSuccess: boolean;
     variant: 'default' | 'error' | 'success';
   }>({
     visible: false,
     title: '',
     message: '',
-    isSuccess: false,
     variant: 'default',
   });
 
@@ -100,6 +105,12 @@ const AuthScreen = () => {
     setMode(newMode);
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setFieldErrors({
+      email: false,
+      username: false,
+      password: false,
+      location: false,
+    });
     setFormData((prev) => ({
       ...prev,
       password: '',
@@ -109,14 +120,15 @@ const AuthScreen = () => {
 
   const handleAutoLocate = async () => {
     setIsLocating(true);
+    if (fieldErrors.location) setFieldErrors((prev) => ({ ...prev, location: false }));
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setAlertConfig({
           visible: true,
-          title: 'Permission_Denied',
+          title: 'Permission Denied',
           message: 'Please allow location access, or type your city manually.',
-          isSuccess: false,
           variant: 'error',
         });
         return;
@@ -158,9 +170,8 @@ const AuthScreen = () => {
       console.error(err);
       setAlertConfig({
         visible: true,
-        title: 'Location_Error',
+        title: 'Location Error',
         message: 'Could not detect location. Please type it manually.',
-        isSuccess: false,
         variant: 'error',
       });
     } finally {
@@ -168,18 +179,53 @@ const AuthScreen = () => {
     }
   };
 
+  const handleBackendError = (errorMessage: string) => {
+    const msg = errorMessage.toLowerCase();
+    let title = mode === 'login' ? 'Login Failed' : 'Signup Failed';
+    let displayMessage = errorMessage;
+
+    // Check Duplicate Username (Signup)
+    if (msg.includes('username') || msg.includes('taken')) {
+      setFieldErrors((prev) => ({ ...prev, username: true }));
+      title = 'Username Unavailable';
+      displayMessage = 'This username is already taken. Please choose another.';
+    }
+    // Check Duplicate Email (Signup)
+    else if (msg.includes('email') && msg.includes('registered')) {
+      setFieldErrors((prev) => ({ ...prev, email: true }));
+      title = 'Email Unavailable';
+      displayMessage = 'This email is already registered. Please log in instead.';
+    }
+    // Check Incorrect Credentials (Login)
+    else if (msg.includes('incorrect') || (msg.includes('email') && msg.includes('password'))) {
+      setFieldErrors((prev) => ({ ...prev, email: true, password: true }));
+      title = 'Access Denied';
+      displayMessage = 'Incorrect email or password. Please try again.';
+    } else if (msg.includes('password')) {
+      setFieldErrors((prev) => ({ ...prev, password: true }));
+    }
+
+    setAlertConfig({
+      visible: true,
+      title,
+      message: displayMessage,
+      variant: 'error',
+    });
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    setFieldErrors({ email: false, username: false, password: false, location: false });
 
     try {
       if (mode === 'signup') {
         const strength = zxcvbn(formData.password);
         if (strength.score < 3) {
+          setFieldErrors((prev) => ({ ...prev, password: true }));
           setAlertConfig({
             visible: true,
-            title: 'Weak_Signature',
+            title: 'Weak Password',
             message: 'Please create a stronger password before continuing.',
-            isSuccess: false,
             variant: 'error',
           });
           setIsSubmitting(false);
@@ -187,11 +233,11 @@ const AuthScreen = () => {
         }
 
         if (formData.password !== formData.confirmPassword) {
+          setFieldErrors((prev) => ({ ...prev, password: true }));
           setAlertConfig({
             visible: true,
-            title: 'Security_Mismatch',
+            title: 'Password Mismatch',
             message: 'Your passwords do not match.',
-            isSuccess: false,
             variant: 'error',
           });
           setIsSubmitting(false);
@@ -202,11 +248,11 @@ const AuthScreen = () => {
         let finalLng = formData.lng;
 
         if (!formData.city.trim() || !formData.province.trim() || !formData.country.trim()) {
+          setFieldErrors((prev) => ({ ...prev, location: true }));
           setAlertConfig({
             visible: true,
-            title: 'Data_Missing',
+            title: 'Missing Information',
             message: 'Please auto-locate or manually select your Country, Province, and City.',
-            isSuccess: false,
             variant: 'error',
           });
           setIsSubmitting(false);
@@ -247,23 +293,14 @@ const AuthScreen = () => {
 
         const result = await signup(signupPayload);
 
-        if (result) {
-          setPendingAuthUser({ user: result.user, token: result.token });
-          setAlertConfig({
-            visible: true,
-            title: 'Access_Granted',
-            message: `Welcome to Swappa, ${result.user.firstname}!`,
-            isSuccess: true,
-            variant: 'success',
-          });
+        if (result && result.user) {
+          setIsSuccess(true);
+          setSuccessMessage(`Welcome to Swappa, ${result.user.firstname}!`);
+          setTimeout(() => {
+            setAuth(result.user, result.token);
+          }, 1500);
         } else {
-          setAlertConfig({
-            visible: true,
-            title: 'Authentication_Failed',
-            message: 'Please check your information and try again.',
-            isSuccess: false,
-            variant: 'error',
-          });
+          handleBackendError(result?.message || 'Please check your information and try again.');
         }
       } else {
         // Handle Login
@@ -271,34 +308,19 @@ const AuthScreen = () => {
 
         const result = await login({ email: cleanEmail, password: formData.password });
 
-        if (result) {
-          setPendingAuthUser({ user: result.user, token: result.token });
-          setAlertConfig({
-            visible: true,
-            title: 'Access_Granted',
-            message: `Welcome back, ${result.user.firstname}!`,
-            isSuccess: true,
-            variant: 'success',
-          });
+        if (result && result.user) {
+          setIsSuccess(true);
+          setSuccessMessage(`Welcome back, ${result.user.firstname}!`);
+          setTimeout(() => {
+            setAuth(result.user, result.token);
+          }, 1500);
         } else {
-          setAlertConfig({
-            visible: true,
-            title: 'Access_Denied',
-            message: 'Incorrect email or password.',
-            isSuccess: false,
-            variant: 'error',
-          });
+          handleBackendError(result?.message || 'Incorrect email or password.');
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setAlertConfig({
-        visible: true,
-        title: 'Network_Error',
-        message: 'Something went wrong connecting to the server.',
-        isSuccess: false,
-        variant: 'error',
-      });
+      handleBackendError(err.message || 'Something went wrong connecting to the server.');
     } finally {
       setIsSubmitting(false);
     }
@@ -322,6 +344,19 @@ const AuthScreen = () => {
     if (passwordStrength.score === 3) return 'Strong (Good to go)';
     return 'Very Strong (Excellent)';
   };
+
+  const isFormValid =
+    mode === 'login'
+      ? formData.email.trim() && formData.password !== ''
+      : formData.firstName.trim() !== '' &&
+        formData.lastName.trim() !== '' &&
+        formData.username.trim() !== '' &&
+        formData.email.trim() !== '' &&
+        formData.password.trim() !== '' &&
+        formData.confirmPassword.trim() !== '' &&
+        formData.country.trim() !== '' &&
+        formData.province.trim() !== '' &&
+        formData.city.trim() !== '';
 
   return (
     <View className="flex-1 flex-row bg-[#F8FAFC]">
@@ -412,7 +447,7 @@ const AuthScreen = () => {
                 Build. Trade. Grow.
               </Text>
               <Text className="font-mono text-sm uppercase tracking-wider text-white opacity-75">
-                // Objective One. 2026
+                Join the Community
               </Text>
             </View>
             <View className="absolute left-8 top-8 h-8 w-8 border-l-2 border-t-2 border-[#EAB308]" />
@@ -497,7 +532,7 @@ const AuthScreen = () => {
                 <Text
                   className={`font-mono text-sm font-bold uppercase tracking-wider ${mode === 'signup' ? 'text-[#0F172A]' : 'text-[#64748B]'}`}
                 >
-                  Signup
+                  Sign Up
                 </Text>
               </TouchableOpacity>
             </View>
@@ -509,59 +544,78 @@ const AuthScreen = () => {
                 <>
                   <View className="flex flex-col gap-4 sm:flex-row">
                     <View className="flex-1">
-                      <Text className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                        User_First_Name
+                      <Text className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-[#475569]">
+                        First Name
                       </Text>
                       <TextInput
                         value={formData.firstName}
                         onChangeText={(text) => setFormData({ ...formData, firstName: text })}
-                        className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
+                        className="h-12 w-full rounded border-2 border-[#94A3B8] bg-white px-4 font-body text-[#0F172A] focus:border-[#1E40AF] focus:outline-none"
                         placeholder="Enter your first name"
+                        placeholderTextColor="#94A3B8"
                       />
                     </View>
 
                     <View className="flex-1">
-                      <Text className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                        User_Last_Name
+                      <Text className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-[#475569]">
+                        Last Name
                       </Text>
                       <TextInput
                         value={formData.lastName}
                         onChangeText={(text) => setFormData({ ...formData, lastName: text })}
-                        className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
+                        className="h-12 w-full rounded border-2 border-[#94A3B8] bg-white px-4 font-body text-[#0F172A] focus:border-[#1E40AF] focus:outline-none"
                         placeholder="Enter your last name"
+                        placeholderTextColor="#94A3B8"
                       />
                     </View>
                   </View>
 
                   <View>
-                    <Text className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                      User_Display_name
+                    <Text
+                      className={`mb-2 font-mono text-xs font-bold uppercase tracking-wider ${fieldErrors.username ? 'text-red-500' : 'text-[#475569]'}`}
+                    >
+                      Display Name
                     </Text>
                     <TextInput
                       value={formData.username}
-                      onChangeText={(text) => setFormData({ ...formData, username: text })}
+                      onChangeText={(text) => {
+                        setFormData({ ...formData, username: text });
+                        if (fieldErrors.username)
+                          setFieldErrors((prev) => ({ ...prev, username: false }));
+                      }}
                       autoCapitalize="none"
-                      className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
+                      className={`h-12 w-full rounded border-2 bg-white px-4 font-body text-[#0F172A] focus:border-[#1E40AF] focus:outline-none ${fieldErrors.username ? 'border-red-500' : 'border-[#94A3B8]'}`}
                       placeholder="Enter your display name"
+                      placeholderTextColor="#94A3B8"
                     />
                   </View>
 
-                  <View className="mb-2 mt-4 border-t border-[#E2E8F0] pt-4">
+                  <View
+                    className={`mb-2 mt-4 border-t pt-4 ${fieldErrors.location ? 'border-red-500' : 'border-[#E2E8F0]'}`}
+                  >
                     <View className="mb-4 flex-row items-center justify-between">
-                      <Text className="font-mono text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                        Location_Data
+                      <Text
+                        className={`font-mono text-xs font-bold uppercase tracking-wider ${fieldErrors.location ? 'text-red-500' : 'text-[#475569]'}`}
+                      >
+                        Your Location
                       </Text>
                       <TouchableOpacity
                         onPress={handleAutoLocate}
                         disabled={isLocating}
-                        className="flex-row items-center gap-2 rounded bg-[#F1F5F9] px-3 py-1.5 active:bg-[#E2E8F0]"
+                        className={`flex-row items-center gap-2 rounded px-3 py-1.5 active:opacity-80 ${fieldErrors.location ? 'border-2 border-red-500 bg-red-50' : 'bg-[#E2E8F0]'}`}
                       >
                         {isLocating ? (
                           <ActivityIndicator size="small" color="#1E40AF" />
                         ) : (
                           <>
-                            <Ionicons name="navigate-outline" size={14} color="#1E40AF" />
-                            <Text className="font-mono text-[10px] font-bold uppercase text-[#1E40AF]">
+                            <Ionicons
+                              name="navigate-outline"
+                              size={14}
+                              color={fieldErrors.location ? '#ef4444' : '#1E40AF'}
+                            />
+                            <Text
+                              className={`font-mono text-[10px] font-bold uppercase ${fieldErrors.location ? 'text-red-500' : 'text-[#1E40AF]'}`}
+                            >
                               Auto-Locate
                             </Text>
                           </>
@@ -573,7 +627,7 @@ const AuthScreen = () => {
                       {/* Country Dropdown */}
                       <TouchableOpacity
                         onPress={() => setShowCountryModal(true)}
-                        className="h-12 w-full flex-row items-center justify-between rounded border border-[#0F172A] bg-white px-4"
+                        className={`h-12 w-full flex-row items-center justify-between rounded border-2 bg-white px-4 ${fieldErrors.location ? 'border-red-500' : 'border-[#94A3B8]'}`}
                       >
                         <Text
                           className={`font-body ${formData.country ? 'text-[#0F172A]' : 'text-[#94A3B8]'}`}
@@ -588,7 +642,7 @@ const AuthScreen = () => {
                         <TouchableOpacity
                           onPress={() => setShowProvinceModal(true)}
                           disabled={!formData.countryCode}
-                          className={`h-12 flex-1 flex-row items-center justify-between rounded border border-[#0F172A] px-4 ${!formData.countryCode ? 'bg-[#F1F5F9] opacity-50' : 'bg-white'}`}
+                          className={`h-12 flex-1 flex-row items-center justify-between rounded border-2 px-4 ${!formData.countryCode ? 'bg-[#F1F5F9] opacity-50' : 'bg-white'} ${fieldErrors.location ? 'border-red-500' : 'border-[#94A3B8]'}`}
                         >
                           <Text
                             className={`font-body ${formData.province ? 'text-[#0F172A]' : 'text-[#94A3B8]'} flex-1`}
@@ -603,7 +657,7 @@ const AuthScreen = () => {
                         <TouchableOpacity
                           onPress={() => setShowCityModal(true)}
                           disabled={!formData.provinceCode}
-                          className={`h-12 flex-1 flex-row items-center justify-between rounded border border-[#0F172A] px-4 ${!formData.provinceCode ? 'bg-[#F1F5F9] opacity-50' : 'bg-white'}`}
+                          className={`h-12 flex-1 flex-row items-center justify-between rounded border-2 px-4 ${!formData.provinceCode ? 'bg-[#F1F5F9] opacity-50' : 'bg-white'} ${fieldErrors.location ? 'border-red-500' : 'border-[#94A3B8]'}`}
                         >
                           <Text
                             className={`font-body ${formData.city ? 'text-[#0F172A]' : 'text-[#94A3B8]'} flex-1`}
@@ -621,40 +675,57 @@ const AuthScreen = () => {
 
               {/* Always Visible: Email & Password */}
               <View>
-                <Text className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                  User_Email
+                <Text
+                  className={`mb-2 font-mono text-xs font-bold uppercase tracking-wider ${fieldErrors.email ? 'text-red-500' : 'text-[#475569]'}`}
+                >
+                  Email Address
                 </Text>
                 <TextInput
                   value={formData.email}
-                  onChangeText={(text) => setFormData({ ...formData, email: text })}
+                  onChangeText={(text) => {
+                    setFormData({ ...formData, email: text });
+                    if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: false }));
+                  }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="off"
-                  className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
+                  className={`h-12 w-full rounded border-2 bg-white px-4 font-body text-[#0F172A] focus:border-[#1E40AF] focus:outline-none ${fieldErrors.email ? 'border-red-500' : 'border-[#94A3B8]'}`}
                   placeholder="user@example.com"
+                  placeholderTextColor="#94A3B8"
                 />
               </View>
 
               <View>
-                <Text className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                  Access_Code
+                <Text
+                  className={`mb-2 font-mono text-xs font-bold uppercase tracking-wider ${fieldErrors.password ? 'text-red-500' : 'text-[#475569]'}`}
+                >
+                  Password
                 </Text>
                 <View className="relative justify-center">
                   <TextInput
                     value={formData.password}
-                    onChangeText={(text) => setFormData({ ...formData, password: text })}
+                    onChangeText={(text) => {
+                      setFormData({ ...formData, password: text });
+                      if (fieldErrors.password)
+                        setFieldErrors((prev) => ({ ...prev, password: false }));
+                    }}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
+                    className={`h-12 w-full rounded border-2 bg-white px-4 font-body text-[#0F172A] focus:border-[#1E40AF] focus:outline-none ${fieldErrors.password ? 'border-red-500' : 'border-[#94A3B8]'}`}
                     placeholder="Enter your password"
+                    placeholderTextColor="#94A3B8"
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
                     className="absolute right-3 p-1"
                   >
-                    <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#64748B" />
+                    <Ionicons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={20}
+                      color={fieldErrors.password ? '#ef4444' : '#64748B'}
+                    />
                   </TouchableOpacity>
                 </View>
 
@@ -680,18 +751,25 @@ const AuthScreen = () => {
               {/* Conditional Confirm Password */}
               {mode === 'signup' && (
                 <View>
-                  <Text className="mb-2 font-mono text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                    Confirm_Code
+                  <Text
+                    className={`mb-2 font-mono text-xs font-bold uppercase tracking-wider ${fieldErrors.password ? 'text-red-500' : 'text-[#475569]'}`}
+                  >
+                    Confirm Password
                   </Text>
                   <View className="relative justify-center">
                     <TextInput
                       value={formData.confirmPassword}
-                      onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
+                      onChangeText={(text) => {
+                        setFormData({ ...formData, confirmPassword: text });
+                        if (fieldErrors.password)
+                          setFieldErrors((prev) => ({ ...prev, password: false }));
+                      }}
                       secureTextEntry={!showConfirmPassword}
                       autoCapitalize="none"
                       autoCorrect={false}
-                      className="h-12 w-full rounded border border-[#0F172A] bg-white px-4 font-body text-[#0F172A]"
+                      className={`h-12 w-full rounded border-2 bg-white px-4 font-body text-[#0F172A] focus:border-[#1E40AF] focus:outline-none ${fieldErrors.password ? 'border-red-500' : 'border-[#94A3B8]'}`}
                       placeholder="Confirm your password"
+                      placeholderTextColor="#94A3B8"
                     />
                     <TouchableOpacity
                       onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -700,7 +778,7 @@ const AuthScreen = () => {
                       <Ionicons
                         name={showConfirmPassword ? 'eye-off' : 'eye'}
                         size={20}
-                        color="#64748B"
+                        color={fieldErrors.password ? '#ef4444' : '#64748B'}
                       />
                     </TouchableOpacity>
                   </View>
@@ -710,25 +788,35 @@ const AuthScreen = () => {
               {/* Submit Button */}
               <TouchableOpacity
                 onPress={handleSubmit}
-                disabled={isSubmitting}
-                className={`mt-2 w-full flex-row items-center justify-center rounded py-4 ${isSubmitting ? 'bg-[#1E40AF]/80' : 'bg-[#1E40AF]'}`}
+                disabled={isSubmitting || isSuccess || !isFormValid}
+                className={`mt-2 w-full flex-row items-center justify-center rounded py-4 shadow-md transition-colors duration-300 ${isSuccess ? 'bg-emerald-500' : isSubmitting || !isFormValid ? 'bg-slate-400 opacity-70 dark:bg-slate-600' : 'bg-[#1E40AF]'}`}
               >
-                {isSubmitting && (
+                {isSubmitting && !isSuccess && (
                   <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
                 )}
+                {isSuccess && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color="#FFFFFF"
+                    style={{ marginRight: 8 }}
+                  />
+                )}
                 <Text className="font-mono text-sm font-bold uppercase tracking-wider text-white">
-                  {isSubmitting
-                    ? 'Processing...'
-                    : mode === 'login'
-                      ? 'Authenticate_Session'
-                      : 'Initiate_Blueprint'}
+                  {isSuccess
+                    ? successMessage
+                    : isSubmitting
+                      ? 'Processing...'
+                      : mode === 'login'
+                        ? 'Log In'
+                        : 'Create Account'}
                 </Text>
               </TouchableOpacity>
 
               {mode === 'login' && (
                 <TouchableOpacity className="mt-2 items-center">
                   <Text className="font-mono text-xs uppercase tracking-wider text-[#1E40AF]">
-                    Forgot_Access_Code?
+                    Forgot Password?
                   </Text>
                 </TouchableOpacity>
               )}
@@ -752,9 +840,6 @@ const AuthScreen = () => {
         variant={alertConfig.variant}
         onClose={() => {
           setAlertConfig((prev) => ({ ...prev, visible: false }));
-          if (alertConfig.isSuccess && pendingAuthUser) {
-            setAuth(pendingAuthUser.user, pendingAuthUser.token);
-          }
         }}
       />
 
@@ -774,6 +859,7 @@ const AuthScreen = () => {
             lat: null,
             lng: null,
           }));
+          if (fieldErrors.location) setFieldErrors((prev) => ({ ...prev, location: false }));
           setShowCountryModal(false);
         }}
       />
@@ -792,6 +878,7 @@ const AuthScreen = () => {
             lat: null,
             lng: null,
           }));
+          if (fieldErrors.location) setFieldErrors((prev) => ({ ...prev, location: false }));
           setShowProvinceModal(false);
         }}
       />
@@ -808,6 +895,7 @@ const AuthScreen = () => {
             lat: parseFloat(option.lat),
             lng: parseFloat(option.lng),
           }));
+          if (fieldErrors.location) setFieldErrors((prev) => ({ ...prev, location: false }));
           setShowCityModal(false);
         }}
       />

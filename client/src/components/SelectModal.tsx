@@ -25,14 +25,7 @@ interface SelectModalProps {
   variant?: 'default' | 'themed';
 }
 
-const SelectModal = ({
-  visible,
-  title,
-  options,
-  onClose,
-  onSelect,
-  variant = 'default',
-}: SelectModalProps) => {
+const SelectModal = ({ visible, title, options, onClose, onSelect }: SelectModalProps) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredOptions = useMemo(() => {
@@ -53,45 +46,39 @@ const SelectModal = ({
     onSelect(option);
   };
 
-  const isThemed = variant === 'themed';
-
   return (
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1 justify-end bg-black/50"
+        className="flex-1 justify-end bg-black/60"
       >
-        <View
-          className={`h-4/5 w-full rounded-t-3xl p-6 pb-10 shadow-xl ${isThemed ? 'bg-card' : 'bg-white'}`}
-        >
+        <View className="h-4/5 w-full rounded-t-2xl bg-card p-6 pb-10 shadow-xl">
           {/* Header */}
-          <View className="mb-4 flex-row items-center justify-between">
-            <Text
-              className={`font-bungee text-xl ${isThemed ? 'text-foreground' : 'text-[#0F172A]'}`}
-            >
+          <View className="mb-6 flex-row items-center justify-between border-b-2 border-border pb-4">
+            <Text className="font-body text-xl font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
               {title}
             </Text>
-            <TouchableOpacity
-              onPress={handleClose}
-              className={`rounded-full p-2 ${isThemed ? 'bg-muted' : 'bg-[#F1F5F9]'}`}
-            >
+            <TouchableOpacity onPress={handleClose} className="p-1 active:opacity-70">
               <Ionicons name="close" size={20} color="#64748B" />
             </TouchableOpacity>
           </View>
 
           {/* Search Bar */}
-          <View
-            className={`mb-4 flex-row items-center rounded-lg border px-3 ${isThemed ? 'border-border bg-background' : 'border-[#CBD5E1] bg-[#F8FAFC]'}`}
-          >
-            <Ionicons name="search" size={18} color="#94A3B8" />
+          <View className="mb-4 flex-row items-center rounded-sm border-2 border-solid border-border bg-muted px-3">
+            <Ionicons name="search" size={18} color="#64748B" />
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search..."
-              className={`h-12 flex-1 px-2 font-body focus:outline-none ${isThemed ? 'text-foreground' : 'text-[#0F172A]'}`}
-              placeholderTextColor={isThemed ? '#64748B' : '#94A3B8'}
+              className="h-12 flex-1 px-2 font-body text-sm text-foreground focus:border-primary focus:outline-none"
+              placeholderTextColor="#64748B"
               autoCorrect={false}
             />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} className="p-1">
+                <Ionicons name="close-circle" size={16} color="#64748B" />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* List */}
@@ -103,21 +90,19 @@ const SelectModal = ({
             renderItem={({ item }) => (
               <TouchableOpacity
                 onPress={() => handleSelect(item)}
-                className={`border-b py-4 ${isThemed ? 'border-border' : 'border-[#E2E8F0]'}`}
+                activeOpacity={0.7}
+                className="flex-row items-center border-b-2 border-border px-2 py-4"
               >
-                <Text
-                  className={`font-body text-[15px] ${isThemed ? 'text-foreground' : 'text-[#0F172A]'}`}
-                >
-                  {item.label}
-                </Text>
+                <Text className="font-body text-sm font-medium text-foreground">{item.label}</Text>
               </TouchableOpacity>
             )}
             ListEmptyComponent={
-              <Text
-                className={`mt-10 text-center font-body ${isThemed ? 'text-muted-foreground' : 'text-[#64748B]'}`}
-              >
-                No results found.
-              </Text>
+              <View className="items-center justify-center py-10">
+                <Ionicons name="search-outline" size={32} color="#64748B" />
+                <Text className="mt-4 font-body text-sm font-bold text-muted-foreground">
+                  No results found.
+                </Text>
+              </View>
             }
           />
         </View>
