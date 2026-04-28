@@ -7,7 +7,6 @@ import {
   Text,
   TouchableOpacity,
   UIManager,
-  useColorScheme,
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -26,10 +25,6 @@ type ThemeMode = 'light' | 'dark' | 'system';
 const SettingsScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const { themeMode, setThemeMode } = useThemeStore();
 
@@ -161,7 +156,11 @@ const SettingsScreen = () => {
           <TouchableOpacity className="w-full flex-row items-center justify-between rounded-sm border-2 border-solid border-border bg-card p-4 shadow-sm active:opacity-80">
             <View className="flex-row items-center gap-4">
               <View className="h-10 w-10 items-center justify-center rounded-sm border-2 border-primary bg-muted">
-                <Ionicons name="lock-closed" size={20} color={primaryIconColor} />
+                <Ionicons
+                  name="lock-closed"
+                  size={20}
+                  className="text-primary dark:text-[#A5B4FC]"
+                />
               </View>
               <View>
                 <Text className="font-body text-sm font-bold text-foreground">
@@ -183,7 +182,11 @@ const SettingsScreen = () => {
           >
             <View className="flex-row items-center gap-4">
               <View className="h-10 w-10 items-center justify-center rounded-sm border-2 border-primary bg-muted">
-                <Ionicons name="notifications" size={20} color={primaryIconColor} />
+                <Ionicons
+                  name="notifications"
+                  size={20}
+                  className="text-primary dark:text-[#A5B4FC]"
+                />
               </View>
               <View>
                 <Text className="font-body text-sm font-bold text-foreground">Notifications</Text>
@@ -220,7 +223,7 @@ const SettingsScreen = () => {
           >
             <View className="flex-row items-center gap-4">
               <View className="h-10 w-10 items-center justify-center rounded-sm border-2 border-primary bg-muted">
-                <Ionicons name="person" size={20} color={primaryIconColor} />
+                <Ionicons name="person" size={20} className="text-primary dark:text-[#A5B4FC]" />
               </View>
               <View>
                 <Text className="font-body text-sm font-bold text-foreground">
@@ -241,7 +244,7 @@ const SettingsScreen = () => {
           >
             <View className="flex-row items-center gap-4">
               <View className="h-10 w-10 items-center justify-center rounded-sm border-2 border-primary bg-muted">
-                <Ionicons name="log-out" size={20} color={primaryIconColor} />
+                <Ionicons name="log-out" size={20} className="text-primary dark:text-[#A5B4FC]" />
               </View>
               <View>
                 <Text className="font-body text-sm font-bold text-foreground">Logout</Text>

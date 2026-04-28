@@ -6,7 +6,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -31,10 +30,6 @@ const ProposeTradeScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const targetUserId = route.params?.userId;
 
@@ -155,7 +150,7 @@ const ProposeTradeScreen = () => {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background px-6">
-        <ActivityIndicator size="large" color={primaryIconColor} />
+        <ActivityIndicator size="large" color="#4F46E5" />
         <Text className="mt-4 text-center font-technical text-sm uppercase tracking-wider text-muted-foreground">
           Loading Swap Interface...
         </Text>
@@ -238,7 +233,11 @@ const ProposeTradeScreen = () => {
               1. What You'll Teach
             </Text>
             {selectedOfferId && (
-              <Ionicons name="checkmark-circle" size={18} color={primaryIconColor} />
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                className="text-primary dark:text-[#A5B4FC]"
+              />
             )}
           </View>
           <Text className="mb-4 font-body text-xs text-muted-foreground">
@@ -247,7 +246,7 @@ const ProposeTradeScreen = () => {
 
           <View className="flex-col gap-2">
             {mySkills.length === 0 ? (
-              <Text className="text-destructive font-body text-sm font-bold">
+              <Text className="font-body text-sm font-bold text-destructive">
                 You must add a teaching skill to your profile before you can trade!
               </Text>
             ) : (
@@ -293,7 +292,11 @@ const ProposeTradeScreen = () => {
               2. What You'll Learn
             </Text>
             {selectedReceiveId && (
-              <Ionicons name="checkmark-circle" size={18} color={primaryIconColor} />
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                className="text-primary dark:text-[#A5B4FC]"
+              />
             )}
           </View>
           <Text className="mb-4 font-body text-xs text-muted-foreground">
@@ -302,7 +305,7 @@ const ProposeTradeScreen = () => {
 
           <View className="flex-col gap-2">
             {partnerSkills.length === 0 ? (
-              <Text className="text-destructive font-body text-sm font-bold">
+              <Text className="font-body text-sm font-bold text-destructive">
                 This user currently has no skills to offer.
               </Text>
             ) : (
@@ -363,7 +366,7 @@ const ProposeTradeScreen = () => {
               className={`w-full rounded-sm border-2 border-solid bg-card px-4 py-3 font-body text-foreground focus:outline-none ${isLocationOverLimit ? 'border-destructive focus:border-destructive' : 'border-border focus:border-primary'}`}
             />
             <Text
-              className={`mt-1 text-right font-technical text-[10px] uppercase tracking-wider ${isLocationOverLimit ? 'text-destructive font-bold' : 'text-muted-foreground'}`}
+              className={`mt-1 text-right font-technical text-[10px] uppercase tracking-wider ${isLocationOverLimit ? 'font-bold text-destructive' : 'text-muted-foreground'}`}
             >
               {location.length} / 100
             </Text>
@@ -387,7 +390,7 @@ const ProposeTradeScreen = () => {
               className={`min-h-[80px] w-full rounded-sm border-2 border-solid bg-card px-4 py-3 font-body text-foreground focus:outline-none ${isMessageOverLimit ? 'border-destructive focus:border-destructive' : 'border-border focus:border-primary'}`}
             />
             <Text
-              className={`mt-1 text-right font-technical text-[10px] uppercase tracking-wider ${isMessageOverLimit ? 'text-destructive font-bold' : 'text-muted-foreground'}`}
+              className={`mt-1 text-right font-technical text-[10px] uppercase tracking-wider ${isMessageOverLimit ? 'font-bold text-destructive' : 'text-muted-foreground'}`}
             >
               {message.length} / 500
             </Text>

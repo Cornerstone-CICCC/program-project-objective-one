@@ -5,7 +5,6 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -50,10 +49,6 @@ const SwapsScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const { user } = useAuthStore();
 
@@ -393,7 +388,7 @@ const SwapsScreen = () => {
       >
         {isLoading ? (
           <View className="items-center justify-center py-12">
-            <ActivityIndicator size="large" color={primaryIconColor} />
+            <ActivityIndicator size="large" color="#4F46E5" />
             <Text className="mt-4 font-technical text-sm uppercase tracking-wider text-muted-foreground">
               Loading Swaps...
             </Text>
@@ -506,7 +501,11 @@ const SwapsScreen = () => {
                       </View>
 
                       <View className="px-2">
-                        <Ionicons name="swap-horizontal" size={20} color={primaryIconColor} />
+                        <Ionicons
+                          name="swap-horizontal"
+                          size={20}
+                          className="text-primary dark:text-[#A5B4FC]"
+                        />
                       </View>
 
                       <View className="flex-1 items-end">
@@ -743,7 +742,11 @@ const SwapsScreen = () => {
                     Location / Platform
                   </Text>
                   <View className="flex-row items-center gap-2 rounded-sm border-2 border-solid border-border bg-slate-50 p-3 dark:bg-slate-800/50">
-                    <Ionicons name="location" size={16} color={primaryIconColor} />
+                    <Ionicons
+                      name="location"
+                      size={16}
+                      className="text-primary dark:text-[#A5B4FC]"
+                    />
                     <Text className="font-body text-sm font-bold text-foreground">
                       {selectedSwap.proposedLocation}
                     </Text>

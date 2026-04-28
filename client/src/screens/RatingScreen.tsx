@@ -9,7 +9,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,10 +21,6 @@ const RatingScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const tradeId = route.params?.tradeId;
   const partnerName = route.params?.partnerName || 'Trade Partner';
@@ -166,7 +161,7 @@ const RatingScreen = () => {
   if (isChecking) {
     return (
       <View className="flex-1 items-center justify-center bg-background px-6">
-        <ActivityIndicator size="large" color={primaryIconColor} />
+        <ActivityIndicator size="large" color="#4F46E5" />
         <Text className="mt-4 text-center font-technical text-sm uppercase tracking-wider text-muted-foreground">
           Checking Records...
         </Text>
@@ -242,7 +237,11 @@ const RatingScreen = () => {
 
         {alreadyReviewed && (
           <View className="mb-6 flex-row items-center gap-2 rounded-sm border-2 border-solid border-primary bg-muted p-4">
-            <Ionicons name="information-circle" size={24} color={primaryIconColor} />
+            <Ionicons
+              name="information-circle"
+              size={24}
+              className="text-primary dark:text-[#A5B4FC]"
+            />
             <Text className="flex-1 font-body text-sm font-bold text-foreground">
               You are currently editing your existing evaluation.
             </Text>
@@ -289,7 +288,7 @@ const RatingScreen = () => {
             className={`min-h-[120px] w-full rounded-sm border-2 border-solid bg-card p-4 font-body text-foreground focus:outline-none ${isReviewOverLimit ? 'border-destructive focus:border-destructive' : 'border-border focus:border-primary'}`}
           />
           <Text
-            className={`mt-1 text-right font-technical text-[10px] uppercase tracking-wider ${isReviewOverLimit ? 'text-destructive font-bold' : 'text-muted-foreground'}`}
+            className={`mt-1 text-right font-technical text-[10px] uppercase tracking-wider ${isReviewOverLimit ? 'font-bold text-destructive' : 'text-muted-foreground'}`}
           >
             {review.length} / 500
           </Text>
@@ -306,7 +305,7 @@ const RatingScreen = () => {
           <TouchableOpacity
             onPress={() => setConfirmDeleteVisible(true)}
             disabled={isSubmitting || isDeleting}
-            className="border-destructive items-center justify-center rounded-sm border-2 border-solid bg-red-50 px-4 active:bg-red-100 dark:bg-red-900/20 dark:active:bg-red-900/40"
+            className="items-center justify-center rounded-sm border-2 border-solid border-destructive bg-red-50 px-4 active:bg-red-100 dark:bg-red-900/20 dark:active:bg-red-900/40"
           >
             {isDeleting ? (
               <ActivityIndicator size="small" color="#EF4444" />

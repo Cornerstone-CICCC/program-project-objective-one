@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,11 +9,6 @@ import { getMyNotifications } from '../api/notification';
 
 const DesktopSidebar = () => {
   const navigation = useNavigation<any>();
-  const [currentRoute, setCurrentRoute] = useState('Economy');
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const primaryIconColor = isDark ? '#A5B4FC' : '#4F46E5';
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
@@ -25,6 +20,10 @@ const DesktopSidebar = () => {
 
     while (route.state && route.state.routes) {
       route = route.state.routes[route.state.index ?? 0];
+    }
+
+    if (route.name === 'MainApp') {
+      return 'Economy';
     }
 
     return route.name as string;
@@ -49,7 +48,7 @@ const DesktopSidebar = () => {
 
   useEffect(() => {
     fetchUnreadData();
-  }, [currentRoute]);
+  }, [currentRouteName]);
 
   useEffect(() => {
     const socket = socketService.socket;
@@ -98,18 +97,24 @@ const DesktopSidebar = () => {
       {/* Logo Header */}
       <View className="flex-row items-center gap-3 border-b border-sidebar-border p-6">
         {/* React Native SVG */}
-        <Svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <Svg
+          width="40"
+          height="40"
+          viewBox="0 0 40 40"
+          fill="none"
+          className="text-primary dark:text-[#A5B4FC]"
+        >
           <Rect
             x="1"
             y="1"
             width="38"
             height="38"
-            stroke={primaryIconColor}
+            stroke="currentColor"
             strokeWidth="2"
             fill="none"
           />
           <Path d="M12 15 L20 15 L20 12 L28 17 L20 22 L20 19 L12 19 Z" fill="#06B6D4" />
-          <Path d="M28 25 L20 25 L20 28 L12 23 L20 18 L20 21 L28 21 Z" fill={primaryIconColor} />
+          <Path d="M28 25 L20 25 L20 28 L12 23 L20 18 L20 21 L28 21 Z" fill="currentColor" />
           <Rect x="3" y="3" width="4" height="4" fill="#06B6D4" />
           <Rect x="33" y="33" width="4" height="4" fill="#06B6D4" />
           <Circle cx="10" cy="30" r="1" fill="#4F46E5" opacity="0.5" />
@@ -146,7 +151,7 @@ const DesktopSidebar = () => {
 
               {/* Notification Badge For Inbox */}
               {name === 'Inbox' && unreadCount > 0 && (
-                <View className="ml-auto items-center justify-center rounded-full bg-red-500 px-2 py-0.5 shadow-sm">
+                <View className="ml-auto items-center justify-center rounded-full bg-red-500 px-2 py-1 shadow-sm">
                   <Text className="font-body text-[10px] font-bold text-white">{unreadCount}</Text>
                 </View>
               )}
