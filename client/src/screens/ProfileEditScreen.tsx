@@ -17,7 +17,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import { Country, State, City } from 'country-state-city';
 import { useAuthStore } from '../store/auth.store';
 import { getAllSkills, ISkill } from '../api/skill';
@@ -64,7 +63,6 @@ const ProfileEditScreen = () => {
     user?.location?.geo_location?.coordinates[0] || null,
   );
 
-  const [isLocating, setIsLocating] = useState(false);
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [showProvinceModal, setShowProvinceModal] = useState(false);
   const [showCityModal, setShowCityModal] = useState(false);
@@ -205,59 +203,6 @@ const ProfileEditScreen = () => {
     }));
   }, [countryCode, provinceCode]);
 
-  const handleAutoLocate = async () => {
-    setIsLocating(true);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setAlertConfig({
-          visible: true,
-          title: 'Permission Denied',
-          message: 'Please allow location access, or select it manually.',
-          isSuccess: false,
-          variant: 'error',
-        });
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
-
-      const geo = await Location.reverseGeocodeAsync({ latitude, longitude });
-      if (geo.length > 0) {
-        const place = geo[0];
-
-        const cityStr = place.city || place.subregion || '';
-        const isoCountry = place.isoCountryCode || '';
-        const countryName = place.country || '';
-
-        const statesForCountry = State.getStatesOfCountry(isoCountry);
-        const matchedState = statesForCountry.find(
-          (s) => s.name === place.region || s.isoCode === place.region,
-        );
-
-        setLat(latitude);
-        setLng(longitude);
-        setCity(cityStr);
-        setCountry(countryName);
-        setCountryCode(isoCountry);
-        setProvince(matchedState ? matchedState.name : place.region || '');
-        setProvinceCode(matchedState ? matchedState.isoCode : '');
-      }
-    } catch (err) {
-      console.error(err);
-      setAlertConfig({
-        visible: true,
-        title: 'Location Error',
-        message: 'Could not detect location. Please select it manually.',
-        isSuccess: false,
-        variant: 'error',
-      });
-    } finally {
-      setIsLocating(false);
-    }
-  };
-
   const uploadToServer = async (imageUri: string) => {
     setIsUploading(true);
     try {
@@ -268,7 +213,7 @@ const ProfileEditScreen = () => {
       } else {
         setAlertConfig({
           visible: true,
-          title: 'Erorr',
+          title: 'Error',
           message: 'Failed to upload image. Please try again.',
           isSuccess: false,
           variant: 'error',
@@ -290,7 +235,7 @@ const ProfileEditScreen = () => {
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -310,16 +255,8 @@ const ProfileEditScreen = () => {
       let finalLat = lat;
       let finalLng = lng;
       if (!finalLat || !finalLng) {
-        try {
-          const geocoded = await Location.geocodeAsync(`${city}, ${province}, ${country}`);
-          if (geocoded.length > 0) {
-            finalLat = geocoded[0].latitude;
-            finalLng = geocoded[0].longitude;
-          }
-        } catch {
-          finalLat = 49.2827;
-          finalLng = -123.1207;
-        }
+        finalLat = 49.2827;
+        finalLng = -123.1207;
       }
 
       await updateUserLocation({
@@ -487,7 +424,7 @@ const ProfileEditScreen = () => {
 
           <TouchableOpacity
             onPress={() => handleRemoveSkill(skillObj, type)}
-            className="border-l border-border bg-card px-2 py-1.5 active:bg-red-500/10"
+            className="m-1 border-l border-border bg-card px-2 py-2 active:bg-red-500/10"
           >
             <Ionicons name="close" size={14} color="#EF4444" />
           </TouchableOpacity>
@@ -614,26 +551,6 @@ const ProfileEditScreen = () => {
               <Text className="font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Your Location
               </Text>
-              <TouchableOpacity
-                onPress={handleAutoLocate}
-                disabled={isLocating}
-                className="flex-row items-center gap-2 rounded bg-muted px-3 py-1.5 active:opacity-80"
-              >
-                {isLocating ? (
-                  <ActivityIndicator size="small" color="#4F46E5" />
-                ) : (
-                  <>
-                    <Ionicons
-                      name="navigate-outline"
-                      size={14}
-                      className="text-primary dark:text-[#A5B4FC]"
-                    />
-                    <Text className="font-technical text-[10px] font-bold uppercase text-primary dark:text-[#A5B4FC]">
-                      Auto-Locate
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
             </View>
 
             <View className="flex-col gap-3">
@@ -650,33 +567,56 @@ const ProfileEditScreen = () => {
               </TouchableOpacity>
 
               <View className="flex-row gap-3">
-                <TouchableOpacity
-                  onPress={() => setShowProvinceModal(true)}
-                  disabled={!countryCode}
-                  className={`h-12 flex-1 flex-row items-center justify-between rounded border-2 border-border px-4 ${!countryCode ? 'bg-muted opacity-50' : 'bg-background'}`}
-                >
-                  <Text
-                    className={`flex-1 font-body ${province ? 'text-foreground' : 'text-muted-foreground'}`}
-                    numberOfLines={1}
+                {countryCode && provinceOptions.length === 0 ? (
+                  <TextInput
+                    value={province}
+                    onChangeText={(text) => {
+                      setProvince(text);
+                      setProvinceCode('');
+                    }}
+                    placeholder="Type Region"
+                    placeholderTextColor="#64748B"
+                    className="h-12 flex-1 rounded-sm border-2 border-border bg-background px-4 font-body text-sm text-foreground focus:border-primary focus:outline-none"
+                  />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => setShowProvinceModal(true)}
+                    disabled={!countryCode}
+                    className={`h-12 flex-1 flex-row items-center justify-between rounded border-2 border-border px-4 ${!countryCode ? 'bg-muted opacity-50' : 'bg-background'}`}
                   >
-                    {province || 'Select Province'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={16} color="#64748B" />
-                </TouchableOpacity>
+                    <Text
+                      className={`flex-1 font-body ${province ? 'text-foreground' : 'text-muted-foreground'}`}
+                      numberOfLines={1}
+                    >
+                      {province || 'Select Province'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={16} color="#64748B" />
+                  </TouchableOpacity>
+                )}
 
-                <TouchableOpacity
-                  onPress={() => setShowCityModal(true)}
-                  disabled={!provinceCode}
-                  className={`h-12 flex-1 flex-row items-center justify-between rounded border-2 border-border px-4 ${!provinceCode ? 'bg-muted opacity-50' : 'bg-background'}`}
-                >
-                  <Text
-                    className={`flex-1 font-body ${city ? 'text-foreground' : 'text-muted-foreground'}`}
-                    numberOfLines={1}
+                {(countryCode && !provinceCode) || (provinceCode && cityOptions.length === 0) ? (
+                  <TextInput
+                    value={city}
+                    onChangeText={setCity}
+                    placeholder="Type City"
+                    placeholderTextColor="#64748B"
+                    className="h-12 flex-1 rounded-sm border-2 border-border bg-background px-4 font-body text-sm text-foreground focus:border-primary focus:outline-none"
+                  />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => setShowCityModal(true)}
+                    disabled={!provinceCode}
+                    className={`h-12 flex-1 flex-row items-center justify-between rounded border-2 border-border px-4 ${!provinceCode ? 'bg-muted opacity-50' : 'bg-background'}`}
                   >
-                    {city || 'Select City'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={16} color="#64748B" />
-                </TouchableOpacity>
+                    <Text
+                      className={`flex-1 font-body ${city ? 'text-foreground' : 'text-muted-foreground'}`}
+                      numberOfLines={1}
+                    >
+                      {city || 'Select City'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={16} color="#64748B" />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -728,7 +668,7 @@ const ProfileEditScreen = () => {
 
         <TouchableOpacity
           onPress={handleSave}
-          disabled={isBioOverLimit || isUploading || isSaving}
+          disabled={isBioOverLimit || isUploading || isSaving || !isFormValid}
           className={`flex-1 flex-row items-center justify-center gap-2 rounded-sm py-3 shadow-sm transition-colors ${!isFormValid ? 'bg-slate-400 opacity-70' : 'bg-primary active:opacity-90'}`}
         >
           {isSaving ? (

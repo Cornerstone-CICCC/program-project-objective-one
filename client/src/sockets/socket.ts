@@ -12,7 +12,7 @@ class SocketService {
       });
 
       this.socket.on('connect', () => {
-        console.log('Global Socket Connected:', this.socket?.id);
+        console.log('Global Socket Connected.');
       });
 
       this.socket.on('disconnect', () => {

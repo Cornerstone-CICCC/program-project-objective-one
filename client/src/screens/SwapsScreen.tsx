@@ -199,7 +199,6 @@ const SwapsScreen = () => {
     if (!socket) return;
 
     const handleRefresh = () => {
-      console.log('Real-time sync triggered! Refreshing swaps...');
       fetchSwaps(true);
     };
 

@@ -23,6 +23,9 @@ import { ThemeController } from './src/components/ThemeController';
 import { useAuthStore } from './src/store/auth.store';
 import { socketService } from './src/sockets/socket';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { LogBox } from 'react-native';
+
+LogBox.ignoreAllLogs(true);
 
 SplashScreen.preventAutoHideAsync();
 
@@ -48,7 +51,6 @@ export default function App() {
 
   useEffect(() => {
     if (user && token) {
-      console.log('App.tsx: User detected. Booting up Global Socket...');
       socketService.connect(token);
     } else {
       socketService.disconnect();

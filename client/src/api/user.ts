@@ -1,5 +1,6 @@
 import { AuthResultType, clearToken, getAuthHeaders, IUser } from './auth';
 import { BASE_URL } from '.';
+import { Platform } from 'react-native';
 
 export interface UpdateProfileData {
   firstname?: string;
@@ -57,7 +58,11 @@ export const updateProfile = async (
       body: JSON.stringify(updateInfo),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Update profile rejected by server:', errorText);
+      return null;
+    }
 
     const data: AuthResultType = await res.json();
     return data;
@@ -91,11 +96,19 @@ export const uploadAvatarImage = async (imageUri: string): Promise<string | null
     const { 'content-type': ignoredContentType, ...headers } = await getAuthHeaders();
 
     const formData = new FormData();
-    formData.append('image', {
-      uri: imageUri,
-      type: 'image/jpeg',
-      name: 'avatar.jpg',
-    } as any);
+
+    if (Platform.OS === 'web') {
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+
+      formData.append('image', blob, 'avatar.jpg');
+    } else {
+      formData.append('image', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'avatar.jpg',
+      } as any);
+    }
 
     const res = await fetch(`${BASE_URL}/users/upload-avatar`, {
       method: 'POST',
@@ -104,8 +117,8 @@ export const uploadAvatarImage = async (imageUri: string): Promise<string | null
     });
 
     if (!res.ok) {
-      const eroorText = await res.text();
-      console.error('Upload failed:', eroorText);
+      const errorText = await res.text();
+      console.error('Upload failed:', errorText);
       return null;
     }
 
