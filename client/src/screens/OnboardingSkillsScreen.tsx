@@ -176,7 +176,7 @@ const OnboardingSkillsScreen = () => {
         style={{ paddingTop: Math.max(insets.top, 24) }}
       >
         <View className="mb-2 flex-row items-center justify-between">
-          <Text className="font-technical text-2xl uppercase tracking-wider text-primary">
+          <Text className="font-technical text-2xl font-bold uppercase tracking-wider text-primary">
             Step {currentStep}
           </Text>
           <Text className="font-technical text-xs font-bold text-muted-foreground">
@@ -201,7 +201,7 @@ const OnboardingSkillsScreen = () => {
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
       >
         {/* Search Bar */}
         <View className="relative mb-6 justify-center">

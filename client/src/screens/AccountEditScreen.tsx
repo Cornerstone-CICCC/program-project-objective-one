@@ -3,6 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -219,7 +220,7 @@ const AccountEditScreen = () => {
             <Ionicons name="arrow-back" size={24} color="#64748B" />
           </TouchableOpacity>
           <View>
-            <Text className="font-technical text-lg uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            <Text className="font-technical text-lg font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
               Edit Profile
             </Text>
             <Text className="mt-1 font-body text-xs text-muted-foreground">
@@ -232,6 +233,7 @@ const AccountEditScreen = () => {
       <ScrollView
         className="flex-1 px-6"
         contentContainerStyle={{ paddingVertical: 24, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
       >
         {/* Personal Infomation */}
         <View className="mb-8 space-y-4">

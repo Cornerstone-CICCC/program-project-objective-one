@@ -122,7 +122,7 @@ const SkillEconomyScreen = () => {
         paddingBottom: Math.max(insets.bottom, 100),
         paddingHorizontal: 16,
       }}
-      showsVerticalScrollIndicator={false}
+      showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
       refreshControl={
         <RefreshControl
           refreshing={isRefreshing}
@@ -135,7 +135,7 @@ const SkillEconomyScreen = () => {
       {/* Header */}
       <View className="mb-8 flex-row items-start justify-between">
         <View className="flex-1">
-          <Text className="mb-1 font-technical text-3xl uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+          <Text className="mb-1 font-technical text-3xl font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
             Market Insights
           </Text>
           <Text className="font-body text-sm text-muted-foreground">
@@ -172,7 +172,7 @@ const SkillEconomyScreen = () => {
             <Text className="mb-1 font-technical text-2xl font-bold text-primary dark:text-[#A5B4FC]">
               {pulseData.networkStats.activeSwapsThisWeek}
             </Text>
-            <Text className="text-center font-body text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <Text className="text-center font-body text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
               Active Swaps
             </Text>
           </View>
@@ -180,7 +180,7 @@ const SkillEconomyScreen = () => {
             <Text className="mb-1 font-technical text-2xl font-bold text-primary dark:text-[#A5B4FC]">
               +{pulseData.networkStats.newNodesThisWeek}
             </Text>
-            <Text className="text-center font-body text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <Text className="text-center font-body text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
               New Users
             </Text>
           </View>
@@ -188,7 +188,7 @@ const SkillEconomyScreen = () => {
             <Text className="mb-1 font-technical text-2xl font-bold text-primary dark:text-[#A5B4FC]">
               {pulseData.networkStats.totalSkillsInCirculation}
             </Text>
-            <Text className="text-center font-body text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <Text className="text-center font-body text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
               Total Skills
             </Text>
           </View>
@@ -246,7 +246,7 @@ const SkillEconomyScreen = () => {
                   {/* Seeking Bar */}
                   <View className="mb-2">
                     <View className="mb-1 flex-row items-center justify-between">
-                      <Text className="font-body text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <Text className="font-body text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
                         Users Seeking
                       </Text>
                       <Text className="font-technical text-xs font-bold text-primary dark:text-[#A5B4FC]">
@@ -261,7 +261,7 @@ const SkillEconomyScreen = () => {
                   {/* Offering Bar */}
                   <View>
                     <View className="mb-1 flex-row items-center justify-between">
-                      <Text className="font-body text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <Text className="font-body text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
                         Users Offering
                       </Text>
                       <Text className="font-technical text-xs font-bold text-slate-500 dark:text-slate-300">
@@ -297,7 +297,7 @@ const SkillEconomyScreen = () => {
               className="w-full flex-col justify-between overflow-hidden rounded-sm border-2 border-border bg-card p-4 shadow-sm md:w-[48%]"
             >
               <View className="p-4">
-                <View className="flex-row justify-between">
+                <View className="flex-row justify-between md:flex-col lg:flex-row lg:justify-between">
                   <Text
                     className="mb-3 font-body text-sm font-bold text-foreground"
                     numberOfLines={1}
@@ -305,7 +305,7 @@ const SkillEconomyScreen = () => {
                     {skill.skill}
                   </Text>
 
-                  <View className="mb-4 flex-row items-center gap-1 self-start rounded-sm border-2 border-emerald-200 bg-emerald-100 px-2 py-1 dark:border-emerald-500 dark:bg-emerald-900/40">
+                  <View className="mb-4 flex-row items-center gap-1 self-start rounded-sm border-2 border-emerald-400 bg-emerald-100 px-2 py-1 dark:border-emerald-500 dark:bg-emerald-900/40">
                     <Ionicons
                       name="trending-up"
                       size={18}
@@ -320,13 +320,13 @@ const SkillEconomyScreen = () => {
                 <View className="gap-1.5">
                   <View className="flex-row items-center gap-2">
                     <View className="h-2 w-2 rounded-full bg-primary" />
-                    <Text className="font-body text-xs text-muted-foreground">
+                    <Text className="font-body text-sm font-bold text-muted-foreground">
                       {skill.seeking} seeking
                     </Text>
                   </View>
                   <View className="flex-row items-center gap-2">
-                    <View className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500" />
-                    <Text className="font-body text-xs text-muted-foreground">
+                    <View className="h-2 w-2 rounded-full bg-slate-500 dark:bg-slate-400" />
+                    <Text className="font-body text-sm font-bold text-muted-foreground">
                       {skill.offering} offering
                     </Text>
                   </View>
@@ -362,14 +362,14 @@ const SkillEconomyScreen = () => {
               <Ionicons name="star" size={20} className="text-primary dark:text-[#A5B4FC]" />
             </View>
             <View className="flex-1">
-              <Text className="mb-2 font-body text-base leading-relaxed text-foreground">
+              <Text className="mb-2 font-body text-base font-bold leading-relaxed text-foreground">
                 Your{' '}
                 <Text className="font-bold tracking-wide text-primary dark:text-[#A5B4FC]">
                   [ {getUserValuableSkill()} ]
                 </Text>{' '}
                 skill is highly valuable in the network right now.
               </Text>
-              <Text className="font-body text-sm leading-relaxed text-muted-foreground">
+              <Text className="font-body text-sm font-semibold leading-relaxed text-muted-foreground">
                 Ensure your profile and proficiency levels are up to date to maximize your swap
                 opportunities.
               </Text>

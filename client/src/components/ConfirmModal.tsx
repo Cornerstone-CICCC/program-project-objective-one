@@ -37,7 +37,7 @@ const ConfirmModal = ({
             <TouchableOpacity
               onPress={onCancel}
               activeOpacity={0.8}
-              className="flex-1 items-center justify-center rounded-sm border-2 border-solid border-border bg-card py-3 shadow-sm"
+              className="flex-1 items-center justify-center rounded-sm border-2 border-solid border-muted-foreground bg-card py-3 shadow-sm"
             >
               <Text className="font-body text-sm font-bold text-foreground">{cancelText}</Text>
             </TouchableOpacity>
@@ -45,7 +45,7 @@ const ConfirmModal = ({
             <TouchableOpacity
               onPress={onConfirm}
               activeOpacity={0.8}
-              className={`flex-1 items-center justify-center rounded-sm border-2 border-solid py-3 shadow-sm ${isDestructive ? 'border-red-600 bg-red-500' : 'border-primary bg-primary'}`}
+              className={`flex-1 items-center justify-center rounded-sm border-2 border-solid py-3 shadow-sm ${isDestructive ? 'border-red-800 bg-red-600' : 'border-primary bg-primary'}`}
             >
               <Text className="font-body text-sm font-bold text-white">{confirmText}</Text>
             </TouchableOpacity>

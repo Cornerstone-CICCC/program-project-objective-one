@@ -80,7 +80,7 @@ const CancelTradeModal = ({ visible, onClose, onConfirm }: CancelTradeModalProps
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
               keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
             >
-              <View className="overflow-hidden rounded-sm border-2 border-border bg-card shadow-xl">
+              <View className="max-w-sm overflow-hidden rounded-sm border-2 border-border bg-card shadow-xl">
                 {/* Header */}
                 <View className="flex-row items-center justify-between border-b border-border p-5">
                   <View className="flex-row items-center gap-2">

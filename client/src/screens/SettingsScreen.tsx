@@ -71,7 +71,7 @@ const SettingsScreen = () => {
           >
             <Ionicons name="arrow-back" size={24} color="#64748B" />
           </TouchableOpacity>
-          <Text className="font-technical text-xl uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+          <Text className="font-technical text-xl font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
             Settings
           </Text>
         </View>
@@ -80,7 +80,7 @@ const SettingsScreen = () => {
       <ScrollView
         className="flex-1 px-4"
         contentContainerStyle={{ paddingVertical: 24, paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
       >
         {/* Profile Edit Card */}
         <View className="mb-8 rounded-sm border-2 border-solid border-border bg-card p-4 shadow-sm">

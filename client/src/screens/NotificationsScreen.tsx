@@ -160,8 +160,8 @@ const NotificationsScreen = () => {
       case 'SWAP_COMPLETED':
         return {
           icon: 'checkmark-done-circle',
-          textClass: 'text-emerald-500 dark:text-emerald-400',
-          borderClass: 'border-emerald-500 dark:border-emerald-400',
+          textClass: 'text-emerald-600 dark:text-emerald-400',
+          borderClass: 'border-emerald-600 dark:border-emerald-400',
         };
       case 'PARTNER_COMPLETED':
         return {
@@ -322,7 +322,7 @@ const NotificationsScreen = () => {
             >
               <Ionicons name="arrow-back" size={28} color="#64748B" />
             </TouchableOpacity>
-            <Text className="font-technical text-2xl uppercase tracking-wider text-foreground">
+            <Text className="font-technical text-2xl font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
               Notifications
             </Text>
           </View>
@@ -359,7 +359,7 @@ const NotificationsScreen = () => {
       <ScrollView
         className="flex-1 px-6 pt-4"
         contentContainerStyle={{ paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
       >
         {notifications.length === 0 ? (
           <View className="items-center justify-center py-10">

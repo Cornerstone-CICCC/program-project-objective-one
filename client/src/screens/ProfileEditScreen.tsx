@@ -418,7 +418,7 @@ const ProfileEditScreen = () => {
           >
             <Text className="mr-1 font-technical text-xs text-foreground">{skillObj.name}</Text>
             <View
-              className={`h-2 w-2 rounded-full ${skillObj.proficiency === 'Expert' ? 'bg-purple-500' : skillObj.proficiency === 'Advanced' ? 'bg-emerald-500' : skillObj.proficiency === 'Intermediate' ? 'bg-amber-500' : 'bg-blue-500'}`}
+              className={`h-2 w-2 rounded-full ${skillObj.proficiency === 'Expert' ? 'bg-purple-600' : skillObj.proficiency === 'Advanced' ? 'bg-emerald-600' : skillObj.proficiency === 'Intermediate' ? 'bg-amber-600' : 'bg-blue-600'}`}
             />
           </TouchableOpacity>
 
@@ -458,7 +458,7 @@ const ProfileEditScreen = () => {
             <Ionicons name="arrow-back" size={24} color="#64748B" />
           </TouchableOpacity>
           <View>
-            <Text className="font-technical text-lg uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            <Text className="font-technical text-lg font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
               Edit Profile
             </Text>
             <Text className="mt-1 font-body text-xs text-muted-foreground">
@@ -471,7 +471,7 @@ const ProfileEditScreen = () => {
       <ScrollView
         className="flex-1 px-6"
         contentContainerStyle={{ paddingVertical: 24, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
       >
         {/* Avatar */}
         <View className="mb-8 items-center">
@@ -805,7 +805,7 @@ const ProfileEditScreen = () => {
               />
             ) : (
               <ScrollView
-                showsVerticalScrollIndicator={false}
+                showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
                 contentContainerStyle={{ paddingBottom: 40 }}
               >
                 <View className="flex-col gap-3">

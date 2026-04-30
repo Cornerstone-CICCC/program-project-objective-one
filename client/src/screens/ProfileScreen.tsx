@@ -3,6 +3,7 @@ import {
   FlatList,
   Image,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -305,6 +306,7 @@ const ProfileScreen = () => {
       <ScrollView
         className="flex-1 px-4"
         contentContainerStyle={{ paddingVertical: 24, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
       >
         {/* Reviews */}
         <View className="mb-6 flex-row items-center justify-between rounded-sm border-2 border-border bg-card p-4 shadow-sm">
@@ -349,13 +351,8 @@ const ProfileScreen = () => {
                   activeOpacity={0.7}
                   className={`flex-row items-center gap-1.5 rounded-sm border-2 px-4 py-2 shadow-sm ${getBadgeStyle(skill.proficiency)}`}
                 >
-                  <Text className="font-body text-sm font-medium text-white">{skill.name}</Text>
-                  <Ionicons
-                    name="information-circle"
-                    size={16}
-                    color="#FFFFFF"
-                    style={{ opacity: 0.8 }}
-                  />
+                  <Text className="font-body text-sm font-bold text-white">{skill.name}</Text>
+                  <Ionicons name="information-circle" size={16} color="#FFFFFF" />
                 </TouchableOpacity>
               ))
             ) : (
@@ -380,13 +377,8 @@ const ProfileScreen = () => {
                   activeOpacity={0.7}
                   className={`flex-row items-center gap-1.5 rounded-sm border-2 px-4 py-2 shadow-sm ${getBadgeStyle(skill.proficiency)}`}
                 >
-                  <Text className="font-body text-sm font-medium text-white">{skill.name}</Text>
-                  <Ionicons
-                    name="information-circle"
-                    size={16}
-                    color="#FFFFFF"
-                    style={{ opacity: 0.8 }}
-                  />
+                  <Text className="font-body text-sm font-bold text-white">{skill.name}</Text>
+                  <Ionicons name="information-circle" size={16} color="#FFFFFF" />
                 </TouchableOpacity>
               ))
             ) : (
@@ -438,7 +430,7 @@ const ProfileScreen = () => {
                     </View>
 
                     <View
-                      className={`rounded-sm px-2 py-1 ${trade.status === 'COMPLETED' ? 'bg-emerald-500' : trade.status === 'CANCELLED' || trade.status === 'REJECTED' ? 'bg-destructive' : 'bg-primary'}`}
+                      className={`rounded-sm px-2 py-1 ${trade.status === 'COMPLETED' ? 'bg-emerald-600' : trade.status === 'CANCELLED' || trade.status === 'REJECTED' ? 'bg-destructive' : 'bg-primary'}`}
                     >
                       <Text className="font-body text-[10px] font-bold uppercase tracking-wider text-white">
                         {trade.status}

@@ -189,7 +189,7 @@ const RatingScreen = () => {
           </TouchableOpacity>
 
           <View>
-            <Text className="font-technical text-xl uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            <Text className="font-technical text-xl font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
               Rate Your Swap
             </Text>
             <Text className="font-body text-xs text-muted-foreground">
@@ -201,7 +201,7 @@ const RatingScreen = () => {
 
       <ScrollView
         className="flex-1 px-6 pt-6"
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         {/* Target Card */}
