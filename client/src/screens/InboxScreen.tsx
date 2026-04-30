@@ -85,7 +85,6 @@ const InboxScreen = () => {
     if (!socket) return;
 
     const handleNewMessage = () => {
-      console.log('New message received! Refreshing inbox...');
       fetchInbox(true);
     };
 

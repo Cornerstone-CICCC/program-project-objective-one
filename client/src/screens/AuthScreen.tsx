@@ -12,7 +12,6 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Defs, Line, Path, Pattern, Rect } from 'react-native-svg';
-import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import { login, signup } from '../api/auth';
 import zxcvbn from 'zxcvbn';
@@ -30,7 +29,6 @@ const AuthScreen = () => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -118,67 +116,6 @@ const AuthScreen = () => {
     }));
   };
 
-  const handleAutoLocate = async () => {
-    setIsLocating(true);
-    if (fieldErrors.location) setFieldErrors((prev) => ({ ...prev, location: false }));
-
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setAlertConfig({
-          visible: true,
-          title: 'Permission Denied',
-          message: 'Please allow location access, or type your city manually.',
-          variant: 'error',
-        });
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
-
-      const geo = await Location.reverseGeocodeAsync({ latitude, longitude });
-      if (geo.length > 0) {
-        const place = geo[0];
-
-        const cityStr = place.city || place.subregion || '';
-        const isoCountry = place.isoCountryCode || '';
-        const countryName = place.country || '';
-
-        const statesForCountry = State.getStatesOfCountry(isoCountry);
-        const matchedState = statesForCountry.find(
-          (s) => s.name === place.region || s.isoCode === place.region,
-        );
-
-        const provinceName = matchedState ? matchedState.name : place.region || '';
-        const isoProvince = matchedState ? matchedState.isoCode : '';
-        const addressStr = place.name || place.street || cityStr;
-
-        setFormData((prev) => ({
-          ...prev,
-          lat: latitude,
-          lng: longitude,
-          city: cityStr,
-          country: countryName,
-          countryCode: isoCountry,
-          province: provinceName,
-          provinceCode: isoProvince,
-          address: addressStr,
-        }));
-      }
-    } catch (err) {
-      console.error(err);
-      setAlertConfig({
-        visible: true,
-        title: 'Location Error',
-        message: 'Could not detect location. Please type it manually.',
-        variant: 'error',
-      });
-    } finally {
-      setIsLocating(false);
-    }
-  };
-
   const handleBackendError = (errorMessage: string) => {
     const msg = errorMessage.toLowerCase();
     let title = mode === 'login' ? 'Login Failed' : 'Signup Failed';
@@ -252,7 +189,7 @@ const AuthScreen = () => {
           setAlertConfig({
             visible: true,
             title: 'Missing Information',
-            message: 'Please auto-locate or manually select your Country, Province, and City.',
+            message: 'Please select your Country, Province, and City.',
             variant: 'error',
           });
           setIsSubmitting(false);
@@ -260,22 +197,8 @@ const AuthScreen = () => {
         }
 
         if (!finalLat || !finalLng) {
-          try {
-            const searchString = `${formData.city}, ${formData.province}, ${formData.country}`;
-            const geocoded = await Location.geocodeAsync(searchString);
-
-            if (geocoded.length > 0) {
-              finalLat = geocoded[0].latitude;
-              finalLng = geocoded[0].longitude;
-            } else {
-              throw new Error('No coordinates found');
-            }
-          } catch (err) {
-            console.log('Emulator geocoding failed! Using Developer Fallback coordinates.');
-
-            finalLat = 49.2827;
-            finalLng = -123.1207;
-          }
+          finalLat = 49.2827;
+          finalLng = -123.1207;
         }
 
         const signupPayload = {
@@ -599,28 +522,6 @@ const AuthScreen = () => {
                       >
                         Your Location
                       </Text>
-                      <TouchableOpacity
-                        onPress={handleAutoLocate}
-                        disabled={isLocating}
-                        className={`flex-row items-center gap-2 rounded px-3 py-1.5 active:opacity-80 ${fieldErrors.location ? 'border-2 border-red-500 bg-red-50' : 'bg-[#E2E8F0]'}`}
-                      >
-                        {isLocating ? (
-                          <ActivityIndicator size="small" color="#1E40AF" />
-                        ) : (
-                          <>
-                            <Ionicons
-                              name="navigate-outline"
-                              size={14}
-                              color={fieldErrors.location ? '#ef4444' : '#1E40AF'}
-                            />
-                            <Text
-                              className={`font-mono text-[10px] font-bold uppercase ${fieldErrors.location ? 'text-red-500' : 'text-[#1E40AF]'}`}
-                            >
-                              Auto-Locate
-                            </Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
                     </View>
 
                     <View className="flex-col gap-3">
@@ -637,36 +538,69 @@ const AuthScreen = () => {
                         <Ionicons name="chevron-down" size={16} color="#64748B" />
                       </TouchableOpacity>
 
-                      <View className="flex-row gap-3">
+                      <View className="w-full flex-col gap-4 sm:flex-row">
                         {/* Province Dropdown */}
-                        <TouchableOpacity
-                          onPress={() => setShowProvinceModal(true)}
-                          disabled={!formData.countryCode}
-                          className={`h-12 flex-1 flex-row items-center justify-between rounded border-2 px-4 ${!formData.countryCode ? 'bg-[#F1F5F9] opacity-50' : 'bg-white'} ${fieldErrors.location ? 'border-red-500' : 'border-[#94A3B8]'}`}
-                        >
-                          <Text
-                            className={`font-body ${formData.province ? 'text-[#0F172A]' : 'text-[#94A3B8]'} flex-1`}
-                            numberOfLines={1}
-                          >
-                            {formData.province || 'Select Province'}
-                          </Text>
-                          <Ionicons name="chevron-down" size={16} color="#64748B" />
-                        </TouchableOpacity>
+                        <View className="flex-1">
+                          {formData.countryCode && provinceOptions.length === 0 ? (
+                            <TextInput
+                              value={formData.province}
+                              onChangeText={(text) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  province: text,
+                                  provinceCode: '',
+                                }))
+                              }
+                              placeholder="Type Region"
+                              placeholderTextColor="#64748B"
+                              className={`h-12 w-full rounded-md border-2 bg-white px-4 font-body text-xs text-[#0F172A] focus:border-[#1E40AF] focus:outline-none ${fieldErrors.location ? 'border-red-500' : 'border-[#CBD5E1]'}`}
+                            />
+                          ) : (
+                            <TouchableOpacity
+                              onPress={() => setShowProvinceModal(true)}
+                              disabled={!formData.countryCode}
+                              className={`h-12 w-full flex-row items-center justify-between rounded border-2 px-4 ${!formData.countryCode ? 'bg-[#F1F5F9] opacity-50' : 'bg-white'} ${fieldErrors.location ? 'border-red-500' : 'border-[#94A3B8]'}`}
+                            >
+                              <Text
+                                className={`font-body ${formData.province ? 'text-[#0F172A]' : 'text-[#94A3B8]'} flex-1`}
+                                numberOfLines={1}
+                              >
+                                {formData.province || 'Select Region'}
+                              </Text>
+                              <Ionicons name="chevron-down" size={16} color="#64748B" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
 
                         {/* City Dropdown */}
-                        <TouchableOpacity
-                          onPress={() => setShowCityModal(true)}
-                          disabled={!formData.provinceCode}
-                          className={`h-12 flex-1 flex-row items-center justify-between rounded border-2 px-4 ${!formData.provinceCode ? 'bg-[#F1F5F9] opacity-50' : 'bg-white'} ${fieldErrors.location ? 'border-red-500' : 'border-[#94A3B8]'}`}
-                        >
-                          <Text
-                            className={`font-body ${formData.city ? 'text-[#0F172A]' : 'text-[#94A3B8]'} flex-1`}
-                            numberOfLines={1}
-                          >
-                            {formData.city || 'Select City'}
-                          </Text>
-                          <Ionicons name="chevron-down" size={16} color="#64748B" />
-                        </TouchableOpacity>
+                        <View className="flex-1">
+                          {(formData.countryCode && !formData.provinceCode) ||
+                          (formData.provinceCode && cityOptions.length === 0) ? (
+                            <TextInput
+                              value={formData.city}
+                              onChangeText={(text) =>
+                                setFormData((prev) => ({ ...prev, city: text }))
+                              }
+                              placeholder="Type City"
+                              placeholderTextColor="#64748B"
+                              className={`h-12 w-full rounded-md border-2 bg-white px-4 font-body text-xs text-[#0F172A] focus:border-[#1E40AF] focus:outline-none ${fieldErrors.location ? 'border-red-500' : 'border-[#CBD5E1]'}`}
+                            />
+                          ) : (
+                            <TouchableOpacity
+                              onPress={() => setShowCityModal(true)}
+                              disabled={!formData.provinceCode}
+                              className={`h-12 w-full flex-row items-center justify-between rounded border-2 px-4 ${!formData.provinceCode ? 'bg-[#F1F5F9] opacity-50' : 'bg-white'} ${fieldErrors.location ? 'border-red-500' : 'border-[#94A3B8]'}`}
+                            >
+                              <Text
+                                className={`font-body ${formData.city ? 'text-[#0F172A]' : 'text-[#94A3B8]'} flex-1`}
+                                numberOfLines={1}
+                              >
+                                {formData.city || 'Select City'}
+                              </Text>
+                              <Ionicons name="chevron-down" size={16} color="#64748B" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -866,7 +800,7 @@ const AuthScreen = () => {
 
       <SelectModal
         visible={showProvinceModal}
-        title="Select Province/State"
+        title="Select Region"
         options={provinceOptions}
         onClose={() => setShowProvinceModal(false)}
         onSelect={(option) => {

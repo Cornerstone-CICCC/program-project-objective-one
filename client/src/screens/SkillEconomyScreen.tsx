@@ -292,29 +292,29 @@ const SkillEconomyScreen = () => {
         </View>
         <View className="flex-row flex-wrap justify-between gap-y-3">
           {pulseData.trendingSkills.map((skill: any) => (
-            <TouchableOpacity
+            <View
               key={skill.skill}
-              activeOpacity={0.7}
-              onPress={() => handleSkillClick(skill.skill)}
-              className="w-[48%] flex-col justify-between overflow-hidden rounded-sm border-2 border-border bg-card p-4 shadow-sm"
+              className="w-full flex-col justify-between overflow-hidden rounded-sm border-2 border-border bg-card p-4 shadow-sm md:w-[48%]"
             >
               <View className="p-4">
-                <Text
-                  className="mb-3 font-body text-sm font-bold text-foreground"
-                  numberOfLines={1}
-                >
-                  {skill.skill}
-                </Text>
-
-                <View className="mb-4 flex-row items-center gap-1 self-start rounded-sm bg-emerald-50 px-2 py-1 dark:bg-emerald-900/40">
-                  <Ionicons
-                    name="trending-up"
-                    size={15}
-                    className="text-[#059669] dark:text-[#34D399]"
-                  />
-                  <Text className="font-technical text-[15px] font-bold text-emerald-700 dark:text-emerald-400">
-                    +{skill.trend}%
+                <View className="flex-row justify-between">
+                  <Text
+                    className="mb-3 font-body text-sm font-bold text-foreground"
+                    numberOfLines={1}
+                  >
+                    {skill.skill}
                   </Text>
+
+                  <View className="mb-4 flex-row items-center gap-1 self-start rounded-sm border-2 border-emerald-200 bg-emerald-100 px-2 py-1 dark:border-emerald-500 dark:bg-emerald-900/40">
+                    <Ionicons
+                      name="trending-up"
+                      size={18}
+                      className="text-[#059669] dark:text-[#34D399]"
+                    />
+                    <Text className="font-technical text-[15px] font-bold text-emerald-700 dark:text-emerald-400">
+                      +{skill.trend}%
+                    </Text>
+                  </View>
                 </View>
 
                 <View className="gap-1.5">
@@ -333,13 +333,17 @@ const SkillEconomyScreen = () => {
                 </View>
               </View>
 
-              <View className="w-full flex-row items-center justify-center gap-1 bg-primary py-2.5">
-                <Ionicons name="search" size={12} color="#FFFFFF" />
-                <Text className="font-body text-[10px] font-bold uppercase tracking-wider text-white">
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => handleSkillClick(skill.skill)}
+                className="w-full flex-row items-center justify-center gap-1 bg-primary py-2.5"
+              >
+                <Ionicons name="search" size={15} color="#FFFFFF" />
+                <Text className="font-body text-[15px] font-bold uppercase tracking-wider text-white">
                   Find Partners
                 </Text>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
           ))}
         </View>
       </View>

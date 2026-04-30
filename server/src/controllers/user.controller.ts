@@ -6,6 +6,7 @@ import userService from '../services/user.service';
 import zxcvbn from 'zxcvbn';
 import { UserSkill } from '../models/userSkill.model';
 import { v2 as cloudinary } from 'cloudinary';
+import { PassThrough } from 'stream';
 
 // Fetch a user's skills
 const fetchUserSkills = async (userId: string | any) => {
@@ -410,17 +411,26 @@ const uploadAvatar = async (req: Request, res: Response) => {
       });
     }
 
-    const b64 = Buffer.from(req.file.buffer).toString('base64');
-    const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+    const uploadResult: any = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'swappa_avatars',
+          transformation: [{ width: 500, height: 500, crop: 'fill', gravity: 'face' }],
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        },
+      );
 
-    const result = await cloudinary.uploader.upload(dataURI, {
-      folder: 'swappa_avatars',
-      transformation: [{ width: 500, height: 500, crop: 'fill', gravity: 'face' }],
+      const bufferStream = new PassThrough();
+      bufferStream.end(req.file?.buffer);
+      bufferStream.pipe(uploadStream);
     });
 
     res.status(200).json({
       message: 'Image uploaded successfully',
-      secure_url: result.secure_url,
+      secure_url: uploadResult.secure_url,
     });
   } catch (err) {
     console.error('Cloudinary backend error:', err);
