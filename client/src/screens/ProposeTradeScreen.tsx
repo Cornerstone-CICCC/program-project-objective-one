@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -194,7 +195,7 @@ const ProposeTradeScreen = () => {
             <Ionicons name="close" size={28} color="#64748B" />
           </TouchableOpacity>
           <View>
-            <Text className="font-technical text-xl uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+            <Text className="font-technical text-xl font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
               Request Swap
             </Text>
             <Text className="font-body text-xs text-muted-foreground">
@@ -206,7 +207,7 @@ const ProposeTradeScreen = () => {
 
       <ScrollView
         className="flex-1 px-6 pt-6"
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* Target Partner Card */}
@@ -347,7 +348,7 @@ const ProposeTradeScreen = () => {
         <View className="mb-8">
           <View className="mb-4 flex-row items-center justify-between">
             <Text className="font-body text-sm font-bold uppercase tracking-wider text-foreground">
-              3. Trade Details
+              3. Details
             </Text>
           </View>
 

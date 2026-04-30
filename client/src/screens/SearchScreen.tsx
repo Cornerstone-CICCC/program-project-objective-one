@@ -50,6 +50,8 @@ const SearchScreen = () => {
   const [displayLimit, setDisplayLimit] = useState(5);
   const [expandedReasons, setExpandedReasons] = useState<string[]>([]);
 
+  const [expandedUserSkills, setExpandedUserSkills] = useState<string[]>([]);
+
   useEffect(() => {
     if (route.params?.prefilledSkill) {
       setSearchQuery(route.params.prefilledSkill);
@@ -131,6 +133,13 @@ const SearchScreen = () => {
     );
   };
 
+  const toggleUserSkillsExpand = (userId: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedUserSkills((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+  };
+
   const formatLocation = (location: any) => {
     if (!location) return 'Remote';
     if (typeof location === 'string') return location;
@@ -184,7 +193,9 @@ const SearchScreen = () => {
     });
   };
 
-  const filteredAI = filterList(aiMatches);
+  const filteredAI = filterList(aiMatches)
+    .sort((a, b) => (b.aiMatchScore || 0) - (a.aiMatchScore || 0))
+    .slice(0, 2);
   const filteredStandard = filterList(dbUsers);
 
   const dedupedStandard = filteredStandard.filter(
@@ -211,7 +222,7 @@ const SearchScreen = () => {
         style={{ paddingTop: Math.max(insets.top, 24) }}
       >
         <View className="mb-4 flex-row items-center justify-between">
-          <Text className="font-technical text-2xl uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+          <Text className="font-technical text-2xl font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
             Discover
           </Text>
 
@@ -284,14 +295,14 @@ const SearchScreen = () => {
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
         refreshControl={
           Platform.OS !== 'web' ? (
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor="#4F46E5"
-              colors={['4F46E5']}
+              colors={['#4F46E5']}
             />
           ) : undefined
         }
@@ -378,7 +389,7 @@ const SearchScreen = () => {
                         {/* Only show AI Match Badge if AI is active */}
                         {hasAIBadge && (
                           <View className="items-center justify-center rounded-sm bg-primary px-2 py-1 shadow-sm">
-                            <Text className="font-technical text-[10px] font-bold uppercase tracking-wider text-white">
+                            <Text className="font-technical text-[13px] font-bold uppercase tracking-wider text-white">
                               {user.aiMatchScore}% Match
                             </Text>
                           </View>
@@ -387,31 +398,82 @@ const SearchScreen = () => {
 
                       {/* All Offering Skills */}
                       <View className="flex-row flex-wrap gap-2">
-                        {user.offering?.map((skill: any, index: number) => {
-                          const skillName =
-                            typeof skill === 'string' ? skill : skill.skill || skill.name;
-                          const proficiency =
-                            typeof skill === 'string'
-                              ? 'BEGINNER'
-                              : skill.proficiency || 'BEGINNER';
-                          const badgeClass = getBadgeStyle(proficiency);
+                        {(() => {
+                          const offeringArray = user.offering || [];
+                          if (offeringArray.length === 0) {
+                            return (
+                              <Text className="font-body text-xs italic text-muted-foreground">
+                                No skills listed
+                              </Text>
+                            );
+                          }
+
+                          const isSkillsExpanded = expandedUserSkills.includes(userId);
+                          const maxVisibleSkills = 4;
+                          const visibleSkills = isSkillsExpanded
+                            ? offeringArray
+                            : offeringArray.slice(0, maxVisibleSkills);
+                          const hiddenCount = offeringArray.length - maxVisibleSkills;
 
                           return (
-                            <View
-                              key={`offer-${index}`}
-                              className={`rounded-sm border-2 border-solid px-2 py-1 shadow-sm ${badgeClass}`}
-                            >
-                              <Text className="font-body text-xs font-bold text-white">
-                                {skillName}
-                              </Text>
-                            </View>
+                            <>
+                              {visibleSkills.map((skill: any, index: number) => {
+                                const skillName =
+                                  typeof skill === 'string' ? skill : skill.skill || skill.name;
+                                const proficiency =
+                                  typeof skill === 'string'
+                                    ? 'BEGINNER'
+                                    : skill.proficiency || 'BEGINNER';
+                                const badgeClass = getBadgeStyle(proficiency);
+
+                                return (
+                                  <View
+                                    key={`offer-${index}`}
+                                    className={`flex-row items-center gap-1.5 rounded-sm border-2 border-solid px-2 py-1 shadow-sm ${badgeClass}`}
+                                  >
+                                    <Text className="font-body text-xs font-bold text-white">
+                                      {skillName}
+                                    </Text>
+                                    <View className="h-1 w-1 rounded-full bg-white" />
+                                    <Text className="font-technical text-[12px] font-bold uppercase text-white/90">
+                                      {proficiency}
+                                    </Text>
+                                  </View>
+                                );
+                              })}
+
+                              {hiddenCount > 0 && !isSkillsExpanded && (
+                                <TouchableOpacity
+                                  activeOpacity={0.7}
+                                  onPress={(e) => {
+                                    if (e && e.stopPropagation) e.stopPropagation();
+                                    toggleUserSkillsExpand(userId);
+                                  }}
+                                  className="justify-center rounded-sm border-2 border-dashed border-muted-foreground bg-muted px-2 py-1"
+                                >
+                                  <Text className="font-technical text-[13px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    +{hiddenCount} More
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+
+                              {isSkillsExpanded && offeringArray.length > maxVisibleSkills && (
+                                <TouchableOpacity
+                                  activeOpacity={0.7}
+                                  onPress={(e) => {
+                                    if (e && e.stopPropagation) e.stopPropagation();
+                                    toggleUserSkillsExpand(userId);
+                                  }}
+                                  className="justify-center rounded-sm border-2 border-solid border-border bg-muted px-2 py-1"
+                                >
+                                  <Text className="font-technical text-[13px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    Show Less
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                            </>
                           );
-                        })}
-                        {(!user.offering || user.offering.length === 0) && (
-                          <Text className="font-body text-xs italic text-muted-foreground">
-                            No skills listed
-                          </Text>
-                        )}
+                        })()}
                       </View>
                     </View>
 
@@ -432,12 +494,12 @@ const SearchScreen = () => {
                         />
                         <View className="flex-1">
                           <Text
-                            className="font-body text-[11px] italic leading-relaxed text-foreground"
+                            className="font-body text-sm italic leading-relaxed text-foreground"
                             numberOfLines={isReasonExpanded ? undefined : 2}
                           >
                             {user.aiReason}
                           </Text>
-                          <Text className="mt-1 font-body text-[10px] font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+                          <Text className="mt-1 font-body text-[14px] font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
                             {isReasonExpanded ? 'Show Less' : 'Read Full Analysis'}
                           </Text>
                         </View>
@@ -479,7 +541,7 @@ const SearchScreen = () => {
                 <TouchableOpacity onPress={() => setIsFilterModalVisible(false)} className="p-2">
                   <Ionicons name="close" size={24} color="#64748B" />
                 </TouchableOpacity>
-                <Text className="font-technical text-xl uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+                <Text className="font-technical text-xl font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
                   Filter Skills
                 </Text>
               </View>
@@ -500,7 +562,7 @@ const SearchScreen = () => {
             <ScrollView
               className="flex-1 p-6"
               contentContainerStyle={{ paddingBottom: 40 }}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
             >
               {isLoadingSkills ? (
                 <View className="items-center justify-center py-12">

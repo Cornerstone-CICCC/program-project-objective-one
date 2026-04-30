@@ -2,6 +2,7 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -300,7 +301,7 @@ const SwapsScreen = () => {
         return {
           iconName: 'checkmark-circle',
           text: 'COMPLETED',
-          bgColor: 'bg-emerald-500 dark:bg-emerald-600',
+          bgColor: 'bg-emerald-600 dark:bg-emerald-700',
           textColor: 'text-white',
         };
       case 'REJECTED':
@@ -308,7 +309,7 @@ const SwapsScreen = () => {
         return {
           iconName: 'close-circle',
           text: 'TERMINATED',
-          bgColor: 'bg-destructive dark:bg-red-600',
+          bgColor: 'bg-red-600 dark:bg-red-700',
           textColor: 'text-white',
         };
       default:
@@ -344,7 +345,7 @@ const SwapsScreen = () => {
         style={{ paddingTop: Math.max(insets.top, 24) }}
       >
         <View className="mb-6 flex-row items-center justify-between">
-          <Text className="font-technical text-2xl uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
+          <Text className="font-technical text-2xl font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
             My Swaps
           </Text>
 
@@ -383,7 +384,7 @@ const SwapsScreen = () => {
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
       >
         {isLoading ? (
           <View className="items-center justify-center py-12">
@@ -678,7 +679,10 @@ const SwapsScreen = () => {
                 </View>
               </View>
 
-              <ScrollView className="mb-4 max-h-[50vh]" showsVerticalScrollIndicator={false}>
+              <ScrollView
+                className="mb-4 max-h-[50vh]"
+                showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
+              >
                 {/* You Provide Section */}
                 <View className="mb-4">
                   <Text className="mb-2 font-body text-xs font-bold uppercase tracking-wider text-muted-foreground">

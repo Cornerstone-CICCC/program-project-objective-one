@@ -22,14 +22,14 @@ const AlertModal = ({
       case 'error':
         return {
           title: 'text-red-600 dark:text-red-400',
-          border: 'border-red-200 dark:border-red-900/50',
-          button: 'bg-red-500',
+          border: 'border-red-400 dark:border-red-900/50',
+          button: 'bg-red-600',
         };
       case 'success':
         return {
           title: 'text-emerald-600 dark:text-emerald-400',
-          border: 'border-emerald-200 dark:border-emerald-900/50',
-          button: 'bg-emerald-500',
+          border: 'border-emerald-400 dark:border-emerald-900/50',
+          button: 'bg-emerald-600',
         };
       default:
         return {

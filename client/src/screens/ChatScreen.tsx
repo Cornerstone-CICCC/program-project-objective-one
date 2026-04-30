@@ -293,7 +293,7 @@ const ChatScreen = () => {
             />
 
             <View>
-              <Text className="font-body font-medium text-foreground">
+              <Text className="font-body font-bold text-foreground">
                 {partnerName || 'Swap Partner'}
               </Text>
               <View className="mt-1 flex-row items-center gap-1.5">
@@ -415,6 +415,7 @@ const ChatScreen = () => {
             className="flex-1 px-4 pt-4"
             contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
             onLayout={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
+            showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
           >
             <Pressable className="flex-1" onPress={() => setSelectedMessageId(null)}>
               {messages.length === 0 && isTradeActive && (
@@ -553,7 +554,7 @@ const ChatScreen = () => {
         {!isTradeActive ? (
           <View className="items-center justify-center rounded-sm border border-border bg-muted py-4">
             <Ionicons name="lock-closed" size={16} color="#64748B" className="mb-1" />
-            <Text className="font-technical text-xs uppercase text-muted-foreground">
+            <Text className="font-technical text-xs font-bold uppercase text-muted-foreground">
               Chat Locked: Trade is {currentTradeStatus}
             </Text>
           </View>
@@ -634,7 +635,10 @@ const ChatScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView className="max-h-[60vh]" showsVerticalScrollIndicator={false}>
+            <ScrollView
+              className="max-h-[60vh]"
+              showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
+            >
               {/* You Are Offering */}
               <View className="mb-6">
                 <Text className="mb-2 font-technical text-xs uppercase tracking-wider text-muted-foreground">

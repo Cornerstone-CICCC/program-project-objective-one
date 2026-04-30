@@ -399,8 +399,8 @@ const AuthScreen = () => {
         {/* Auth Card Container */}
         <ScrollView
           className="w-full max-w-md"
-          showsVerticalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 40 }}
+          showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
         >
           {/* Mobile Logo */}
           {!isDesktop && (
@@ -723,7 +723,7 @@ const AuthScreen = () => {
               <TouchableOpacity
                 onPress={handleSubmit}
                 disabled={isSubmitting || isSuccess || !isFormValid}
-                className={`mt-2 w-full flex-row items-center justify-center rounded py-4 shadow-md transition-colors duration-300 ${isSuccess ? 'bg-emerald-500' : isSubmitting || !isFormValid ? 'bg-slate-400 opacity-70 dark:bg-slate-600' : 'bg-[#1E40AF]'}`}
+                className={`mt-2 w-full flex-row items-center justify-center rounded py-4 shadow-md transition-colors duration-300 ${isSuccess ? 'bg-emerald-600' : isSubmitting || !isFormValid ? 'bg-slate-400 opacity-70 dark:bg-slate-600' : 'bg-[#1E40AF]'}`}
               >
                 {isSubmitting && !isSuccess && (
                   <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />

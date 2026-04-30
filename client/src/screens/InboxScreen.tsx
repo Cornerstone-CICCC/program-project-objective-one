@@ -174,7 +174,7 @@ const InboxScreen = () => {
         className="border-b border-border bg-card p-6"
         style={{ paddingTop: Math.max(insets.top, 24) }}
       >
-        <Text className="font-technical text-2xl uppercase tracking-wider text-foreground">
+        <Text className="font-technical text-2xl font-bold uppercase tracking-wider text-primary dark:text-[#A5B4FC]">
           Messages
         </Text>
         <Text className="mt-2 font-body text-sm text-muted-foreground">
@@ -183,7 +183,11 @@ const InboxScreen = () => {
       </View>
 
       {/* Message List */}
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={Platform.OS === 'web' ? true : false}
+      >
         {isLoading ? (
           <View className="items-center justify-center py-12">
             <ActivityIndicator size="large" color="#4F46E5" />

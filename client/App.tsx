@@ -23,7 +23,18 @@ import { ThemeController } from './src/components/ThemeController';
 import { useAuthStore } from './src/store/auth.store';
 import { socketService } from './src/sockets/socket';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { LogBox } from 'react-native';
+import { LogBox, View } from 'react-native';
+import { cssInterop } from 'nativewind';
+import { Ionicons } from '@expo/vector-icons';
+
+cssInterop(Ionicons, {
+  className: {
+    target: 'style',
+    nativeStyleToProp: {
+      color: true,
+    },
+  },
+});
 
 LogBox.ignoreAllLogs(true);
 
@@ -66,16 +77,18 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView>
+    <GestureHandlerRootView className="flex-1 bg-muted">
       <SafeAreaProvider>
-        <NavigationContainer
-          documentTitle={{
-            formatter: () => 'SWAPPA',
-          }}
-        >
-          <ThemeController />
-          <RootNavigator />
-        </NavigationContainer>
+        <View className="mx-auto w-full max-w-[1440px] flex-1 bg-background md:shadow-2xl">
+          <NavigationContainer
+            documentTitle={{
+              formatter: () => 'SWAPPA',
+            }}
+          >
+            <ThemeController />
+            <RootNavigator />
+          </NavigationContainer>
+        </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
