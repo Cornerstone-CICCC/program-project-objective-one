@@ -55,6 +55,7 @@ const DesktopSidebar = () => {
     if (!socket) return;
 
     const handleUpdate = () => {
+      setHasUnreadNotifs(true);
       fetchUnreadData();
     };
 

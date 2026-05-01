@@ -224,6 +224,8 @@ const SwapsScreen = () => {
     reason?: string,
   ) => {
     try {
+      const targetSwap = swaps.find((s) => s.id === swapId);
+
       const res = await updateTradeStatus(swapId, newStatus, reason);
 
       setSelectedSwap(null);
@@ -233,14 +235,30 @@ const SwapsScreen = () => {
         setCancelModalConfig({ visible: false, swapId: '' });
       }
 
+      if (newStatus === 'ACCEPTED') {
+        handleTabChange('active');
+      } else if (newStatus === 'COMPLETED') {
+        if (targetSwap?.partnerCompleted) {
+          handleTabChange('history');
+        } else {
+          handleTabChange('active');
+        }
+      } else if (newStatus === 'REJECTED' || newStatus === 'CANCELLED') {
+        handleTabChange('history');
+      }
+
       fetchSwaps(true);
 
       if (newStatus === 'COMPLETED') {
-        const msg = res?.message || 'Completion recorded. Waiting for your partner to confirm.';
+        const isFullyComplete = targetSwap?.partnerCompleted;
+        const defaultMsg = isFullyComplete
+          ? 'Swap fully completed! You can now leave a rating.'
+          : 'Completion recorded. Waiting for your partner to confirm.';
+
         setAlertConfig({
           visible: true,
-          title: 'Status Updated',
-          message: msg,
+          title: isFullyComplete ? 'Swap Completed' : 'Status Updated',
+          message: res?.message || defaultMsg,
           variant: 'success',
         });
       }
@@ -301,7 +319,7 @@ const SwapsScreen = () => {
         return {
           iconName: 'checkmark-circle',
           text: 'COMPLETED',
-          bgColor: 'bg-emerald-600 dark:bg-emerald-700',
+          bgColor: 'bg-emerald-700 dark:bg-emerald-700',
           textColor: 'text-white',
         };
       case 'REJECTED':
@@ -327,7 +345,7 @@ const SwapsScreen = () => {
       case 'EXPERT':
         return 'bg-purple-600 border-purple-700';
       case 'ADVANCED':
-        return 'bg-emerald-600 border-emerald-700';
+        return 'bg-emerald-700 border-emerald-700';
       case 'INTERMEDIATE':
         return 'bg-amber-600 border-amber-700';
       default:
@@ -478,7 +496,7 @@ const SwapsScreen = () => {
                           !swap.myCompleted && (
                             <View className="flex-row items-center gap-1 rounded-sm bg-emerald-50 px-2 py-1 dark:bg-emerald-900/30">
                               <Ionicons name="checkmark-circle" size={12} color="#10B981" />
-                              <Text className="font-body text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
+                              <Text className="font-body text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-400">
                                 Partner Confirmed
                               </Text>
                             </View>
@@ -579,7 +597,7 @@ const SwapsScreen = () => {
                           {!swap.myCompleted ? (
                             <TouchableOpacity
                               onPress={() => handleStatusUpdate(swap.id, 'COMPLETED')}
-                              className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-emerald-700 bg-emerald-600 py-3 shadow-sm active:opacity-80"
+                              className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-emerald-700 bg-emerald-700 py-3 shadow-sm active:opacity-80"
                             >
                               <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
                               <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
@@ -603,7 +621,7 @@ const SwapsScreen = () => {
                             <>
                               <TouchableOpacity
                                 onPress={() => handleStatusUpdate(swap.id, 'ACCEPTED')}
-                                className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-emerald-700 bg-emerald-600 py-3 shadow-sm active:opacity-80"
+                                className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-emerald-700 bg-emerald-700 py-3 shadow-sm active:opacity-80"
                               >
                                 <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                                 <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">
@@ -777,7 +795,7 @@ const SwapsScreen = () => {
                   <View className="flex-row gap-3">
                     <TouchableOpacity
                       onPress={() => handleStatusUpdate(selectedSwap.id, 'ACCEPTED')}
-                      className="flex-1 flex-row items-center justify-center gap-2 rounded-sm bg-emerald-600 py-4 shadow-sm active:opacity-80"
+                      className="flex-1 flex-row items-center justify-center gap-2 rounded-sm bg-emerald-700 py-4 shadow-sm active:opacity-80"
                     >
                       <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                       <Text className="font-body text-sm font-bold uppercase tracking-wider text-white">
@@ -845,7 +863,7 @@ const SwapsScreen = () => {
                       {!selectedSwap.myCompleted ? (
                         <TouchableOpacity
                           onPress={() => handleStatusUpdate(selectedSwap.id, 'COMPLETED')}
-                          className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-emerald-700 bg-emerald-600 py-3 shadow-sm active:opacity-80"
+                          className="flex-1 flex-row items-center justify-center gap-2 rounded-sm border-2 border-solid border-emerald-700 bg-emerald-700 py-3 shadow-sm active:opacity-80"
                         >
                           <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
                           <Text className="font-body text-xs font-bold uppercase tracking-wider text-white">

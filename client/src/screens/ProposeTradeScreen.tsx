@@ -140,7 +140,7 @@ const ProposeTradeScreen = () => {
       case 'Expert':
         return 'bg-purple-600 border-purple-700';
       case 'Advanced':
-        return 'bg-emerald-600 border-emerald-700';
+        return 'bg-emerald-700 border-emerald-700';
       case 'Intermediate':
         return 'bg-amber-600 border-amber-700';
       default:

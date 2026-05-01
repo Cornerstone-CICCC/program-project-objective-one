@@ -27,9 +27,9 @@ const AlertModal = ({
         };
       case 'success':
         return {
-          title: 'text-emerald-600 dark:text-emerald-400',
+          title: 'text-emerald-700 dark:text-emerald-400',
           border: 'border-emerald-400 dark:border-emerald-900/50',
-          button: 'bg-emerald-600',
+          button: 'bg-emerald-700',
         };
       default:
         return {
