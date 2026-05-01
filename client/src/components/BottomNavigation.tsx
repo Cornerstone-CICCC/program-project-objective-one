@@ -9,11 +9,6 @@ import { getMyNotifications } from '../api/notification';
 const BottomNavigation = ({ state, navigation }: any) => {
   const insets = useSafeAreaInsets();
 
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const activeColor = isDark ? '#A5B4FC' : '#4F46E5';
-  const inactiveColor = '#64748B';
-
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
 
@@ -48,6 +43,7 @@ const BottomNavigation = ({ state, navigation }: any) => {
       fetchUnreadData();
     };
     const handleNewNotification = () => {
+      setHasUnreadNotifs(true);
       fetchUnreadData();
     };
 
@@ -104,7 +100,7 @@ const BottomNavigation = ({ state, navigation }: any) => {
             <Ionicons
               name={isActive ? activeIcon : inactiveIcon}
               size={24}
-              color={isActive ? activeColor : inactiveColor}
+              className={isActive ? 'text-primary dark:text-[#A5B4FC]' : 'text-[#64748B]'}
               style={{ marginBottom: 4 }}
             />
 

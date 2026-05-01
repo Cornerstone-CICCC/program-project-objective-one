@@ -253,7 +253,7 @@ const ChatScreen = () => {
   const getTradeStatusConfig = (status: string) => {
     switch (status?.toUpperCase()) {
       case 'COMPLETED':
-        return { bg: 'bg-emerald-600', icon: 'checkmark-circle', text: 'COMPLETED' };
+        return { bg: 'bg-emerald-700', icon: 'checkmark-circle', text: 'COMPLETED' };
       case 'CANCELLED':
       case 'REJECTED':
         return { bg: 'bg-red-600', icon: 'close-circle', text: 'TERMINATED' };

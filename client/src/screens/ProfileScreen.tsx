@@ -187,7 +187,7 @@ const ProfileScreen = () => {
 
   const getBadgeStyle = (proficiency: Proficiency) => {
     if (proficiency === 'Expert') return 'bg-purple-600 border-purple-700';
-    if (proficiency === 'Advanced') return 'bg-emerald-600 border-emerald-700';
+    if (proficiency === 'Advanced') return 'bg-emerald-700 border-emerald-700';
     if (proficiency === 'Intermediate') return 'bg-amber-600 border-amber-700';
     return 'bg-blue-600 border-blue-700';
   };
@@ -430,7 +430,7 @@ const ProfileScreen = () => {
                     </View>
 
                     <View
-                      className={`rounded-sm px-2 py-1 ${trade.status === 'COMPLETED' ? 'bg-emerald-600' : trade.status === 'CANCELLED' || trade.status === 'REJECTED' ? 'bg-destructive' : 'bg-primary'}`}
+                      className={`rounded-sm px-2 py-1 ${trade.status === 'COMPLETED' ? 'bg-emerald-700' : trade.status === 'CANCELLED' || trade.status === 'REJECTED' ? 'bg-destructive' : 'bg-primary'}`}
                     >
                       <Text className="font-body text-[10px] font-bold uppercase tracking-wider text-white">
                         {trade.status}

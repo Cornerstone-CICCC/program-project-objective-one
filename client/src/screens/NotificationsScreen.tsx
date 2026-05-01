@@ -160,7 +160,7 @@ const NotificationsScreen = () => {
       case 'SWAP_COMPLETED':
         return {
           icon: 'checkmark-done-circle',
-          textClass: 'text-emerald-600 dark:text-emerald-400',
+          textClass: 'text-emerald-700 dark:text-emerald-400',
           borderClass: 'border-emerald-600 dark:border-emerald-400',
         };
       case 'PARTNER_COMPLETED':
@@ -279,6 +279,7 @@ const NotificationsScreen = () => {
     switch (notification.type) {
       case 'SWAP_REQUESTED':
         navigation.navigate('MainApp', { screen: 'Swaps', params: { targetTab: 'pending' } });
+        break;
       case 'PARTNER_COMPLETED':
       case 'SWAP_ACCEPTED':
         navigation.navigate('MainApp', { screen: 'Swaps', params: { targetTab: 'active' } });

@@ -418,7 +418,7 @@ const ProfileEditScreen = () => {
           >
             <Text className="mr-1 font-technical text-xs text-foreground">{skillObj.name}</Text>
             <View
-              className={`h-2 w-2 rounded-full ${skillObj.proficiency === 'Expert' ? 'bg-purple-600' : skillObj.proficiency === 'Advanced' ? 'bg-emerald-600' : skillObj.proficiency === 'Intermediate' ? 'bg-amber-600' : 'bg-blue-600'}`}
+              className={`h-2 w-2 rounded-full ${skillObj.proficiency === 'Expert' ? 'bg-purple-600' : skillObj.proficiency === 'Advanced' ? 'bg-emerald-700' : skillObj.proficiency === 'Intermediate' ? 'bg-amber-600' : 'bg-blue-600'}`}
             />
           </TouchableOpacity>
 

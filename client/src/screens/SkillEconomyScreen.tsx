@@ -163,7 +163,7 @@ const SkillEconomyScreen = () => {
       <View className="mb-8">
         <View className="mb-4 flex-row items-center gap-2">
           <Ionicons name="analytics" size={20} className="text-primary dark:text-[#A5B4FC]" />
-          <Text className="font-body text-sm font-bold uppercase tracking-wider text-foreground">
+          <Text className="font-body text-base font-bold uppercase tracking-wider text-foreground">
             Network Stats
           </Text>
         </View>
@@ -199,7 +199,7 @@ const SkillEconomyScreen = () => {
       <View className="mb-8">
         <View className="mb-4 flex-row items-center gap-2">
           <Ionicons name="flame" size={20} color="#10B981" />
-          <Text className="font-body text-sm font-bold uppercase tracking-wider text-foreground">
+          <Text className="font-body text-base font-bold uppercase tracking-wider text-foreground">
             High Demand Skills
           </Text>
         </View>
@@ -226,7 +226,7 @@ const SkillEconomyScreen = () => {
                       <Text className="font-body text-base font-bold text-foreground">
                         {opportunity.skill}
                       </Text>
-                      <Text className="mt-0.5 font-body text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      <Text className="mt-0.5 font-body text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
                         {ratioDisplay}:1 Demand Ratio
                       </Text>
                     </View>
@@ -286,7 +286,7 @@ const SkillEconomyScreen = () => {
       <View className="mb-8">
         <View className="mb-4 flex-row items-center gap-2">
           <Ionicons name="trending-up" size={20} className="text-primary dark:text-[#A5B4FC]" />
-          <Text className="font-body text-sm font-bold uppercase tracking-wider text-foreground">
+          <Text className="font-body text-base font-bold uppercase tracking-wider text-foreground">
             Trending Skills
           </Text>
         </View>
@@ -299,7 +299,7 @@ const SkillEconomyScreen = () => {
               <View className="p-4">
                 <View className="flex-row justify-between md:flex-col lg:flex-row lg:justify-between">
                   <Text
-                    className="mb-3 font-body text-sm font-bold text-foreground"
+                    className="mb-3 font-body text-base font-bold text-foreground"
                     numberOfLines={1}
                   >
                     {skill.skill}
